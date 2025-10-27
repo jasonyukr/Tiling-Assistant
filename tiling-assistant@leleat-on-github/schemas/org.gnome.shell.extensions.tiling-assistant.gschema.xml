@@ -89,10 +89,10 @@
 		<key name="center-window" type="as">
 			<default>[]</default>
 		</key>
-		<key name="center-window-half" type="as">
+		<key name="center-window-column" type="as">
 			<default>[]</default>
 		</key>
-		<key name="center-reasonable-window" type="as">
+		<key name="center-compact-window" type="as">
 			<default>[]</default>
 		</key>
 		<key name="tile-top-half" type="as">

@@ -220,26 +220,31 @@ var Handler = class TilingKeybindingHandler {
             }
 
         // Center window to Center Column (configurable width)
-        } else if (shortcutName === Shortcuts.CENTER_WINDOW_HALF) {
+        } else if (shortcutName === Shortcuts.CENTER_WINDOW_COLUMN) {
             const workArea = new Rect(window.get_work_area_current_monitor());
             const widthRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COLUMN_WIDTH))) / 100;
             const width = Math.floor(workArea.width * widthRatio);
-            const height = workArea.height;
             const x = workArea.center.x - Math.floor(width / 2);
-            const y = workArea.center.y - Math.floor(height / 2);
+
+            // Use a base rect that spans the full workArea height, then apply gaps as needed
+            const baseRect = new Rect(x, workArea.y, width, workArea.height);
 
             if (window.isTiled) {
+                // For tiled windows, pass the base rect; tiling logic applies gaps when moving
                 const currRect = window.tiledRect;
-                const tileRect = new Rect(x, y, width, height);
-                if (!tileRect.equal(currRect))
-                    Twm.tile(window, tileRect, { openTilingPopup: false });
+                if (!baseRect.equal(currRect))
+                    Twm.tile(window, baseRect, { openTilingPopup: false });
             } else if (!Twm.isMaximized(window)) {
                 if (!window.allows_move() || !window.allows_resize())
                     return;
 
+                // Honor configured window/screen gaps for the actual geometry
+                const target = baseRect.addGaps(workArea);
+                const geom = { x: target.x, y: target.y, width: target.width, height: target.height };
+
                 const currRect = window.get_frame_rect();
-                if (x === currRect.x && y === currRect.y &&
-                    width === currRect.width && height === currRect.height)
+                if (geom.x === currRect.x && geom.y === currRect.y &&
+                    geom.width === currRect.width && geom.height === currRect.height)
                     return;
 
                 const wActor = window.get_compositor_private();
@@ -249,11 +254,11 @@ var Handler = class TilingKeybindingHandler {
                     currRect,
                     Meta.SizeChange.UNMAXIMIZE
                 );
-                window.move_resize_frame(false, x, y, width, height);
+                window.move_resize_frame(false, geom.x, geom.y, geom.width, geom.height);
             }
 
         // Center window to Center Compact (configurable)
-        } else if (shortcutName === Shortcuts.CENTER_WINDOW_REASONABLE) {
+        } else if (shortcutName === Shortcuts.CENTER_WINDOW_COMPACT) {
             const workArea = new Rect(window.get_work_area_current_monitor());
             const widthRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_WIDTH))) / 100;
             const heightRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_HEIGHT))) / 100;

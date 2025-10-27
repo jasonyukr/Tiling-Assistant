@@ -618,7 +618,7 @@
                           <object class="TilingAssistantListRow">
                             <property name="title" translatable="yes">Move Window to Center Column</property>
                             <property name="suffix">
-                              <object class="ShortcutListener" id="center_window_half"/>
+                              <object class="ShortcutListener" id="center_window_column"/>
                             </property>
                           </object>
                         </child>
@@ -626,7 +626,7 @@
                           <object class="TilingAssistantListRow">
                             <property name="title" translatable="yes">Move Window to Center Compact</property>
                             <property name="suffix">
-                              <object class="ShortcutListener" id="center_reasonable_window"/>
+                              <object class="ShortcutListener" id="center_compact_window"/>
                             </property>
                           </object>
                         </child>
