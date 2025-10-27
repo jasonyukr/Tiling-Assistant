@@ -62,6 +62,9 @@ const PrefsWidget = GObject.registerClass({
         'center_window',
         'center_window_half',
         'center_reasonable_window',
+        'center_column_width',
+        'center_compact_width',
+        'center_compact_height',
         'tile_top_half',
         'tile_bottom_half',
         'tile_left_half',
@@ -254,7 +257,10 @@ const PrefsWidget = GObject.registerClass({
             Settings.SCREEN_GAP,
             Settings.INVERSE_TOP_MAXIMIZE_TIMER,
             Settings.VERTICAL_PREVIEW_AREA,
-            Settings.HORIZONTAL_PREVIEW_AREA
+            Settings.HORIZONTAL_PREVIEW_AREA,
+            Settings.CENTER_COLUMN_WIDTH,
+            Settings.CENTER_COMPACT_WIDTH,
+            Settings.CENTER_COMPACT_HEIGHT
         ];
 
         spinButtons.forEach(key => {

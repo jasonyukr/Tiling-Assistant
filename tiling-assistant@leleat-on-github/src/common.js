@@ -37,6 +37,9 @@ var Settings = class Settings {
     static ENABLE_HOLD_INVERSE_LANDSCAPE = 'enable-hold-maximize-inverse-landscape';
     static ENABLE_HOLD_INVERSE_PORTRAIT = 'enable-hold-maximize-inverse-portrait';
     static RESTORE_SIZE_ON = 'restore-window-size-on';
+    static CENTER_COLUMN_WIDTH = 'center-column-width';
+    static CENTER_COMPACT_WIDTH = 'center-compact-width';
+    static CENTER_COMPACT_HEIGHT = 'center-compact-height';
 
     static initialize() {
         const ExtensionUtils = imports.misc.extensionUtils;
@@ -96,7 +99,10 @@ var Settings = class Settings {
             this.INVERSE_TOP_MAXIMIZE_TIMER,
             this.ENABLE_HOLD_INVERSE_LANDSCAPE,
             this.ENABLE_HOLD_INVERSE_PORTRAIT,
-            this.RESTORE_SIZE_ON
+            this.RESTORE_SIZE_ON,
+            this.CENTER_COLUMN_WIDTH,
+            this.CENTER_COMPACT_WIDTH,
+            this.CENTER_COMPACT_HEIGHT
         ];
     }
 

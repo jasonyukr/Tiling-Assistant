@@ -46,6 +46,17 @@
 			<default>false</default>
 		</key>
 
+		<!-- Centering ratios -->
+		<key name="center-column-width" type="i">
+			<default>65</default>
+		</key>
+		<key name="center-compact-width" type="i">
+			<default>55</default>
+		</key>
+		<key name="center-compact-height" type="i">
+			<default>65</default>
+		</key>
+
 		<!-- Keybindings Page -->
 
 		<key name="toggle-tiling-popup" type="as">

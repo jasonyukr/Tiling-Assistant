@@ -183,10 +183,11 @@ var Handler = class TilingKeybindingHandler {
                 window.move_frame(false, x, y);
             }
 
-        // Center window to Center Half (65% width, full height)
+        // Center window to Center Column (configurable width)
         } else if (shortcutName === Shortcuts.CENTER_WINDOW_HALF) {
             const workArea = new Rect(window.get_work_area_current_monitor());
-            const width = Math.floor(workArea.width * 0.65);
+            const widthRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COLUMN_WIDTH))) / 100;
+            const width = Math.floor(workArea.width * widthRatio);
             const height = workArea.height;
             const x = workArea.center.x - Math.floor(width / 2);
             const y = workArea.center.y - Math.floor(height / 2);
@@ -215,11 +216,13 @@ var Handler = class TilingKeybindingHandler {
                 window.move_resize_frame(false, x, y, width, height);
             }
 
-        // Center window to Reasonable-Sized Center (55% width, 65% height)
+        // Center window to Center Compact (configurable)
         } else if (shortcutName === Shortcuts.CENTER_WINDOW_REASONABLE) {
             const workArea = new Rect(window.get_work_area_current_monitor());
-            const width = Math.floor(workArea.width * 0.55);
-            const height = Math.floor(workArea.height * 0.65);
+            const widthRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_WIDTH))) / 100;
+            const heightRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_HEIGHT))) / 100;
+            const width = Math.floor(workArea.width * widthRatio);
+            const height = Math.floor(workArea.height * heightRatio);
             const x = workArea.center.x - Math.floor(width / 2);
             const y = workArea.center.y - Math.floor(height / 2);
 

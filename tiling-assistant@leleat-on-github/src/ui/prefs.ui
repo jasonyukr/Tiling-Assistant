@@ -84,6 +84,27 @@
     <property name="step-increment">2</property>
     <property name="page-increment">8</property>
   </object>
+  <object class="GtkAdjustment" id="center-column-width-adjustment">
+    <property name="lower">10</property>
+    <property name="upper">100</property>
+    <property name="value">65</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">5</property>
+  </object>
+  <object class="GtkAdjustment" id="center-compact-width-adjustment">
+    <property name="lower">10</property>
+    <property name="upper">100</property>
+    <property name="value">55</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">5</property>
+  </object>
+  <object class="GtkAdjustment" id="center-compact-height-adjustment">
+    <property name="lower">10</property>
+    <property name="upper">100</property>
+    <property name="value">65</property>
+    <property name="step-increment">1</property>
+    <property name="page-increment">5</property>
+  </object>
 
   <!-- ======================================================================================== -->
   <!-- ======================================================================================== -->
@@ -587,7 +608,7 @@
                         </child>
                         <child>
                           <object class="TilingAssistantListRow">
-                            <property name="title" translatable="yes">Move Window to Center Half</property>
+                            <property name="title" translatable="yes">Move Window to Center Column</property>
                             <property name="suffix">
                               <object class="ShortcutListener" id="center_window_half"/>
                             </property>
@@ -595,9 +616,48 @@
                         </child>
                         <child>
                           <object class="TilingAssistantListRow">
-                            <property name="title" translatable="yes">Move Window to Reasonable-Sized Center</property>
+                            <property name="title" translatable="yes">Move Window to Center Compact</property>
                             <property name="suffix">
                               <object class="ShortcutListener" id="center_reasonable_window"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Center Column width (%)</property>
+                            <property name="suffix">
+                              <object class="GtkSpinButton" id="center_column_width">
+                                <property name="can-focus">True</property>
+                                <property name="halign">end</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">center-column-width-adjustment</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Center Compact width (%)</property>
+                            <property name="suffix">
+                              <object class="GtkSpinButton" id="center_compact_width">
+                                <property name="can-focus">True</property>
+                                <property name="halign">end</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">center-compact-width-adjustment</property>
+                              </object>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Center Compact height (%)</property>
+                            <property name="suffix">
+                              <object class="GtkSpinButton" id="center_compact_height">
+                                <property name="can-focus">True</property>
+                                <property name="halign">end</property>
+                                <property name="hexpand">True</property>
+                                <property name="adjustment">center-compact-height-adjustment</property>
+                              </object>
                             </property>
                           </object>
                         </child>
