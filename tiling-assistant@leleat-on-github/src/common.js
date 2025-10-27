@@ -164,6 +164,7 @@ var Shortcuts = class Shortcuts {
     static EDIT_MODE = 'tile-edit-mode';
     static AUTO_FILL = 'auto-tile';
     static ALWAYS_ON_TOP = 'toggle-always-on-top';
+    static MAXIMIZE_WINDOW = 'maximize-window';
     static MAXIMIZE = 'tile-maximize';
     static MAXIMIZE_V = 'tile-maximize-vertically';
     static MAXIMIZE_H = 'tile-maximize-horizontally';
@@ -192,6 +193,7 @@ var Shortcuts = class Shortcuts {
             this.EDIT_MODE,
             this.AUTO_FILL,
             this.ALWAYS_ON_TOP,
+            this.MAXIMIZE_WINDOW,
             this.MAXIMIZE,
             this.MAXIMIZE_V,
             this.MAXIMIZE_H,

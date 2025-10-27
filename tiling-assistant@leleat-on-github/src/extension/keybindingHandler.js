@@ -93,6 +93,46 @@ var Handler = class TilingKeybindingHandler {
         } else if (shortcutName === Shortcuts.ALWAYS_ON_TOP) {
             window.is_above() ? window.unmake_above() : window.make_above();
 
+        // Maximize strictly (no toggle) -> fill work area without entering a 'maximized' state
+        } else if (shortcutName === Shortcuts.MAXIMIZE_WINDOW) {
+            const workArea = new Rect(window.get_work_area_current_monitor());
+
+            // Ensure we're not in a maximized or tiled state first
+            if (window.isTiled) {
+                Twm.untile(window, { restoreFullPos: false, clampToWorkspace: true, skipAnim: true });
+            } else if (window.get_maximized()) {
+                window.unmaximize(window.get_maximized());
+            }
+
+            if (!window.allows_move() || !window.allows_resize())
+                return;
+
+            // Respect "maximize-with-gap" if enabled
+            const screenGap = Settings.getInt(Settings.SCREEN_GAP);
+            const useGaps = screenGap && Settings.getBoolean(Settings.MAXIMIZE_WITH_GAPS);
+
+            const target = workArea.copy();
+            const geom = useGaps
+                ? target.addGaps(workArea)
+                : { x: target.x, y: target.y, width: target.width, height: target.height };
+
+            const currRect = window.get_frame_rect();
+            if (currRect.x === geom.x && currRect.y === geom.y &&
+                currRect.width === geom.width && currRect.height === geom.height)
+                return;
+
+            const wActor = window.get_compositor_private();
+            wActor && Main.wm._prepareAnimationInfo(
+                global.window_manager,
+                wActor,
+                currRect,
+                Meta.SizeChange.MAXIMIZE
+            );
+
+            // Wayland workaround: set position first
+            Meta.is_wayland_compositor() && window.move_frame(false, geom.x, geom.y);
+            window.move_resize_frame(false, geom.x, geom.y, geom.width, geom.height);
+
         // Toggle maximization vertically
         } else if (shortcutName === Shortcuts.MAXIMIZE_V) {
             const workArea = new Rect(window.get_work_area_current_monitor());

@@ -560,6 +560,14 @@
                         </child>
                         <child>
                           <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Maximize Window</property>
+                            <property name="suffix">
+                              <object class="ShortcutListener" id="maximize_window"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
                             <property name="title" translatable="yes">Toggle Maximization</property>
                             <property name="suffix">
                               <object class="ShortcutListener" id="tile_maximize"/>

@@ -71,6 +71,9 @@
 		<key name="toggle-always-on-top" type="as">
 			<default>[]</default>
 		</key>
+		<key name="maximize-window" type="as">
+			<default>[]</default>
+		</key>
 		<key name="tile-maximize" type="as">
 			<default><![CDATA[['<Super>Up','<Super>KP_5']]]></default>
 		</key>
