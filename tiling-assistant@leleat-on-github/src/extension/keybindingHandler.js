@@ -93,7 +93,7 @@ var Handler = class TilingKeybindingHandler {
         } else if (shortcutName === Shortcuts.ALWAYS_ON_TOP) {
             window.is_above() ? window.unmake_above() : window.make_above();
 
-        // Maximize strictly (no toggle) -> fill work area without entering a 'maximized' state
+        // Almost-maximize (no toggle): fill work area while keeping configured gaps
         } else if (shortcutName === Shortcuts.MAXIMIZE_WINDOW) {
             const workArea = new Rect(window.get_work_area_current_monitor());
 
@@ -107,14 +107,9 @@ var Handler = class TilingKeybindingHandler {
             if (!window.allows_move() || !window.allows_resize())
                 return;
 
-            // Respect "maximize-with-gap" if enabled
-            const screenGap = Settings.getInt(Settings.SCREEN_GAP);
-            const useGaps = screenGap && Settings.getBoolean(Settings.MAXIMIZE_WITH_GAPS);
-
-            const target = workArea.copy();
-            const geom = useGaps
-                ? target.addGaps(workArea)
-                : { x: target.x, y: target.y, width: target.width, height: target.height };
+            // Always respect configured gaps for an "almost maximized" geometry
+            const target = workArea.copy().addGaps(workArea);
+            const geom = { x: target.x, y: target.y, width: target.width, height: target.height };
 
             const currRect = window.get_frame_rect();
             if (currRect.x === geom.x && currRect.y === geom.y &&
@@ -130,7 +125,8 @@ var Handler = class TilingKeybindingHandler {
             );
 
             // Wayland workaround: set position first
-            Meta.is_wayland_compositor() && window.move_frame(false, geom.x, geom.y);
+            if (Meta.is_wayland_compositor())
+                window.move_frame(false, geom.x, geom.y);
             window.move_resize_frame(false, geom.x, geom.y, geom.width, geom.height);
 
         // Toggle maximization vertically
