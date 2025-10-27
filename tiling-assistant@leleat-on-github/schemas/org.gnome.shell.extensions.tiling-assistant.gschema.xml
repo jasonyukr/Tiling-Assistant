@@ -75,6 +75,12 @@
 		<key name="center-window" type="as">
 			<default>[]</default>
 		</key>
+		<key name="center-window-half" type="as">
+			<default>[]</default>
+		</key>
+		<key name="center-reasonable-window" type="as">
+			<default>[]</default>
+		</key>
 		<key name="tile-top-half" type="as">
 			<default><![CDATA[['<Super>KP_8']]]></default>
 		</key>

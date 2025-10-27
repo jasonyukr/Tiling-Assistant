@@ -163,6 +163,8 @@ var Shortcuts = class Shortcuts {
     static MAXIMIZE_H = 'tile-maximize-horizontally';
     static RESTORE_WINDOW = 'restore-window';
     static CENTER_WINDOW = 'center-window';
+    static CENTER_WINDOW_HALF = 'center-window-half';
+    static CENTER_WINDOW_REASONABLE = 'center-reasonable-window';
     static TOP = 'tile-top-half';
     static BOTTOM = 'tile-bottom-half';
     static LEFT = 'tile-left-half';
@@ -189,6 +191,8 @@ var Shortcuts = class Shortcuts {
             this.MAXIMIZE_H,
             this.RESTORE_WINDOW,
             this.CENTER_WINDOW,
+            this.CENTER_WINDOW_HALF,
+            this.CENTER_WINDOW_REASONABLE,
             this.TOP,
             this.BOTTOM,
             this.LEFT,
