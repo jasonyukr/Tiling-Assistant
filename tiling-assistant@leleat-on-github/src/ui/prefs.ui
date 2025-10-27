@@ -560,9 +560,9 @@
                         </child>
                         <child>
                           <object class="TilingAssistantListRow">
-                            <property name="title" translatable="yes">Maximize Window</property>
+                            <property name="title" translatable="yes">Move Window to Center Full</property>
                             <property name="suffix">
-                              <object class="ShortcutListener" id="maximize_window"/>
+                              <object class="ShortcutListener" id="center_full_window"/>
                             </property>
                           </object>
                         </child>

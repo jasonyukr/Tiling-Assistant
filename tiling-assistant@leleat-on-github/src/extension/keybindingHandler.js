@@ -94,7 +94,7 @@ var Handler = class TilingKeybindingHandler {
             window.is_above() ? window.unmake_above() : window.make_above();
 
         // Almost-maximize (no toggle): fill work area while keeping configured gaps
-        } else if (shortcutName === Shortcuts.MAXIMIZE_WINDOW) {
+        } else if (shortcutName === Shortcuts.CENTER_WINDOW_FULL) {
             const workArea = new Rect(window.get_work_area_current_monitor());
 
             // Ensure we're not in a maximized or tiled state first
