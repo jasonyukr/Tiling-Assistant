@@ -275,7 +275,7 @@ var Layout = class Layout {
      */
     constructor(layout = null) {
         this._name = layout?._name ?? '';
-        this._items = layout?._items ?? [];
+        this._items = Array.isArray(layout?._items) ? layout._items : [];
     }
 
     /**
@@ -324,7 +324,7 @@ var Layout = class Layout {
      */
     getItems(filterOutEmptyRects = true) {
         return filterOutEmptyRects
-            ? this._items.filter(i => Object.keys(i.rect).length === 4)
+            ? this._items.filter(i => i?.rect && typeof i.rect === 'object' && Object.keys(i.rect).length === 4)
             : this._items;
     }
 

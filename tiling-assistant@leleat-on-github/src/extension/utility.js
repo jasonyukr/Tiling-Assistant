@@ -7,7 +7,7 @@ const ByteArray = imports.byteArray;
 const ExtensionUtils = imports.misc.extensionUtils;
 const Me = ExtensionUtils.getCurrentExtension();
 
-const { Direction, Orientation, Settings } = Me.imports.src.common;
+const { Direction, Layout, Orientation, Settings } = Me.imports.src.common;
 
 const GNOME_VERSION = parseFloat(imports.misc.config.PACKAGE_VERSION);
 
@@ -120,7 +120,12 @@ var Util = class Utility {
         if (!success || !contents.length)
             return [];
 
-        return JSON.parse(ByteArray.toString(contents));
+        try {
+            const layouts = JSON.parse(ByteArray.toString(contents));
+            return Array.isArray(layouts) ? layouts : [];
+        } catch (e) {
+            return [];
+        }
     }
 
     /**
@@ -146,7 +151,11 @@ var Util = class Utility {
         // Scale the rect's ratios to the workArea. Try to align the rects to
         // each other and the workArea to workaround possible rounding errors
         // due to the scaling.
-        layout._items.forEach(({ rect: rectRatios }, idx) => {
+        const items = new Layout(layout).getItems();
+        if (!items.length)
+            return [];
+
+        items.forEach(({ rect: rectRatios }, idx) => {
             const rect = new Rect(
                 workArea.x + Math.floor(rectRatios.x * workArea.width),
                 workArea.y + Math.floor(rectRatios.y * workArea.height),

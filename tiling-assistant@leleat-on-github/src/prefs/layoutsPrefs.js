@@ -93,10 +93,20 @@ var Prefs = class TilingLayoutsPrefs {
             return;
 
         let layouts = [];
+        const parseLayouts = bytes => {
+            try {
+                const parsed = JSON.parse(ByteArray.toString(bytes));
+                return Array.isArray(parsed) ? parsed : null;
+            } catch (e) {
+                return null;
+            }
+        };
 
         // Custom layouts are already defined in the file.
         if (contents.length) {
-            layouts = JSON.parse(ByteArray.toString(contents));
+            layouts = parseLayouts(contents);
+            if (!layouts)
+                return;
             layouts.forEach((layout, idx) => this._createLayoutRow(idx, layout));
 
         // Otherwise import the examples... but only do it once!
@@ -112,7 +122,9 @@ var Prefs = class TilingLayoutsPrefs {
             if (!succ)
                 return;
 
-            layouts = c.length ? JSON.parse(ByteArray.toString(c)) : [];
+            layouts = c.length ? parseLayouts(c) : [];
+            if (!layouts)
+                return;
             layouts.forEach((layout, idx) => this._createLayoutRow(idx, layout));
             this._saveLayouts();
         }
