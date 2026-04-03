@@ -162,11 +162,13 @@ function disable() {
     this._getDraggableWindowForPosition = null;
 
     // Relete custom tiling properties.
-    const openWindows = global.display.get_tab_list(Meta.TabList.NORMAL, null);
+    const openWindows = global.display.get_tab_list(Meta.TabList.NORMAL_ALL, null);
     openWindows.forEach(w => {
         delete w.isTiled;
         delete w.tiledRect;
         delete w.untiledRect;
+        delete w._tilingWorkspace;
+        delete w._tilingWorkspaceIndex;
     });
 }
 
@@ -220,9 +222,6 @@ function _saveBeforeSessionLock() {
  * reload them here.
  */
 function _loadAfterSessionLock() {
-    if (!this._wasLocked)
-        return;
-
     this._wasLocked = false;
 
     const userPath = GLib.get_user_config_dir();
@@ -233,33 +232,65 @@ function _loadAfterSessionLock() {
 
     try { file.create(Gio.FileCreateFlags.NONE, null); } catch (e) {}
     const [success, contents] = file.load_contents(null);
-    if (!success || !contents.length)
+    if (!success || !contents.length) {
+        try { file.delete(null); } catch (e) {}
         return;
+    }
+
+    let saveObj;
+    try {
+        saveObj = JSON.parse(ByteArray.toString(contents));
+    } catch (e) {
+        try { file.delete(null); } catch (err) {}
+        return;
+    }
+
+    if (!saveObj || typeof saveObj !== 'object') {
+        try { file.delete(null); } catch (e) {}
+        return;
+    }
 
     const openWindows = this._twm.getWindows(false);
-    const saveObj = JSON.parse(ByteArray.toString(contents));
 
-    const windowObjects = saveObj['windows'];
+    const jsToRect = jsRect => {
+        if (!jsRect || typeof jsRect !== 'object')
+            return null;
+
+        const { x, y, width, height } = jsRect;
+        if ([x, y, width, height].some(v => typeof v !== 'number'))
+            return null;
+
+        return new Rect(x, y, width, height);
+    };
+
+    const windowObjects = Array.isArray(saveObj['windows']) ? saveObj['windows'] : [];
     windowObjects.forEach(wObj => {
+        if (!wObj || typeof wObj !== 'object')
+            return;
+
         const { windowId, isTiled, tiledRect, untiledRect } = wObj;
         const window = openWindows.find(w => w.get_stable_sequence() === windowId);
         if (!window)
             return;
 
-        const jsToRect = jsRect => jsRect && new Rect(
-            jsRect.x, jsRect.y, jsRect.width, jsRect.height
-        );
+        const restoredTiledRect = jsToRect(tiledRect);
+        const restoredUntiledRect = jsToRect(untiledRect);
 
-        window.isTiled = isTiled;
-        window.tiledRect = jsToRect(tiledRect);
-        window.untiledRect = jsToRect(untiledRect);
-        if (isTiled) {
+        window.isTiled = !!isTiled && !!restoredTiledRect && !!restoredUntiledRect;
+        window.tiledRect = restoredTiledRect;
+        window.untiledRect = restoredUntiledRect;
+        if (window.isTiled) {
             window._tilingWorkspace = window.get_workspace();
             window._tilingWorkspaceIndex = window._tilingWorkspace?.index();
+        } else {
+            delete window._tilingWorkspace;
+            delete window._tilingWorkspaceIndex;
         }
     });
 
-    const tileGroups = new Map(saveObj['tileGroups']);
+    const tileGroups = Array.isArray(saveObj['tileGroups'])
+        ? new Map(saveObj['tileGroups'].filter(entry => Array.isArray(entry) && entry.length === 2))
+        : new Map();
     this._twm.setTileGroups(tileGroups);
     openWindows.forEach(w => {
         if (tileGroups.has(w.get_id())) {
@@ -267,4 +298,6 @@ function _loadAfterSessionLock() {
             this._twm.updateTileGroup(group);
         }
     });
+
+    try { file.delete(null); } catch (e) {}
 }

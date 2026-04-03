@@ -26,9 +26,15 @@ var TilingWindowManager = class TilingWindowManager {
 
         this._wsAddedId = global.workspace_manager.connect('workspace-added', this._onWorkspaceAdded.bind(this));
         this._wsRemovedId = global.workspace_manager.connect('workspace-removed', this._onWorkspaceRemoved.bind(this));
+
+        this._openAppTiledCreateId = 0;
+        this._openAppTiledFirstFrameId = 0;
+        this._openAppTiledFirstFrameActor = null;
     }
 
     static destroy() {
+        this._clearOpenAppTiledSignals();
+
         this._signals.destroy();
         this._signals = null;
 
@@ -52,6 +58,24 @@ var TilingWindowManager = class TilingWindowManager {
             GLib.Source.remove(this._wsRemovedTimer);
             this._wsRemovedTimer = null;
         }
+    }
+
+    static _clearOpenAppTiledSignals() {
+        if (this._openAppTiledCreateId) {
+            try {
+                global.display.disconnect(this._openAppTiledCreateId);
+            } catch (e) {}
+            this._openAppTiledCreateId = 0;
+        }
+
+        if (this._openAppTiledFirstFrameId && this._openAppTiledFirstFrameActor) {
+            try {
+                this._openAppTiledFirstFrameActor.disconnect(this._openAppTiledFirstFrameId);
+            } catch (e) {}
+            this._openAppTiledFirstFrameId = 0;
+        }
+
+        this._openAppTiledFirstFrameActor = null;
     }
 
     static connect(signal, func) {
@@ -362,6 +386,8 @@ var TilingWindowManager = class TilingWindowManager {
             const signals = this._signals.getSignalsFor(windowId);
 
             this._tileGroups.set(windowId, tileGroup.map(w => w.get_id()));
+            window._tilingWorkspace = window.get_workspace();
+            window._tilingWorkspaceIndex = window._tilingWorkspace?.index();
 
             /**
              * clearTilingProps may have been called before this function,
@@ -394,6 +420,9 @@ var TilingWindowManager = class TilingWindowManager {
                 const raisedWindowId = raisedWindow.get_id();
                 if (Settings.getBoolean(Settings.RAISE_TILE_GROUPS)) {
                     const raisedWindowsTileGroup = this._tileGroups.get(raisedWindowId);
+                    if (!raisedWindowsTileGroup)
+                        return;
+
                     raisedWindowsTileGroup.forEach(wId => {
                         const w = this._getWindow(wId);
                         const otherRaiseId = this._signals.getSignalsFor(wId).get(TilingSignals.RAISE);
@@ -457,6 +486,11 @@ var TilingWindowManager = class TilingWindowManager {
         if (signals.get(TilingSignals.UNMANAGING)) {
             window && window.disconnect(signals.get(TilingSignals.UNMANAGING));
             signals.set(TilingSignals.UNMANAGING, 0);
+        }
+
+        if (window) {
+            delete window._tilingWorkspace;
+            delete window._tilingWorkspaceIndex;
         }
 
         if (!this._tileGroups.has(windowId))
@@ -917,11 +951,18 @@ var TilingWindowManager = class TilingWindowManager {
         if (!app?.can_open_new_window())
             return;
 
-        let createId = global.display.connect('window-created', (src, window) => {
+        this._clearOpenAppTiledSignals();
+        this._openAppTiledCreateId = global.display.connect('window-created', (src, window) => {
             const wActor = window.get_compositor_private();
-            let firstFrameId = wActor?.connect('first-frame', () => {
-                wActor.disconnect(firstFrameId);
-                firstFrameId = 0;
+            this._openAppTiledFirstFrameActor = wActor;
+            this._openAppTiledFirstFrameId = wActor?.connect('first-frame', () => {
+                if (this._openAppTiledFirstFrameId && this._openAppTiledFirstFrameActor) {
+                    try {
+                        this._openAppTiledFirstFrameActor.disconnect(this._openAppTiledFirstFrameId);
+                    } catch (e) {}
+                }
+                this._openAppTiledFirstFrameId = 0;
+                this._openAppTiledFirstFrameActor = null;
 
                 const winTracker = Shell.WindowTracker.get_default();
                 const openedWindowApp = winTracker.get_window_app(window);
@@ -929,11 +970,13 @@ var TilingWindowManager = class TilingWindowManager {
                 // to be moved and resized because, for example, Steam uses a
                 // WindowType.Normal window for their loading screen, which we
                 // don't want to trigger the tiling for.
-                if (createId && openedWindowApp && openedWindowApp === app &&
+                if (this._openAppTiledCreateId && openedWindowApp && openedWindowApp === app &&
                         (window.allows_resize() && window.allows_move() || window.get_maximized())
                 ) {
-                    global.display.disconnect(createId);
-                    createId = 0;
+                    try {
+                        global.display.disconnect(this._openAppTiledCreateId);
+                    } catch (e) {}
+                    this._openAppTiledCreateId = 0;
                     this.tile(window, rect, { openTilingPopup, skipAnim: true });
                 }
             });
@@ -944,10 +987,7 @@ var TilingWindowManager = class TilingWindowManager {
             // signals above fail disconnect the signals after 1 min at the latest
             this._openAppTiledTimerId && GLib.Source.remove(this._openAppTiledTimerId);
             this._openAppTiledTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 60000, () => {
-                createId && global.display.disconnect(createId);
-                createId = 0;
-                firstFrameId && wActor.disconnect(firstFrameId);
-                firstFrameId = 0;
+                this._clearOpenAppTiledSignals();
                 this._openAppTiledTimerId = null;
                 return GLib.SOURCE_REMOVE;
             });
@@ -1109,8 +1149,10 @@ var TilingWindowManager = class TilingWindowManager {
         signals.set(TilingSignals.UNMANAGING, umId);
 
         // Refresh 'workspace-changed' signal
+        const wsSignal = signals.get(TilingSignals.WS_CHANGED);
+        wsSignal && window.disconnect(wsSignal);
         const wsId = window.connect('workspace-changed', () => this._onWindowWorkspaceChanged(window));
-        this._signals.getSignalsFor(wId).set(TilingSignals.WS_CHANGED, wsId);
+        signals.set(TilingSignals.WS_CHANGED, wsId);
     }
 
     /**
