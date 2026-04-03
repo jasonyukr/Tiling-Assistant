@@ -163,6 +163,7 @@ var TilingWindowManager = class TilingWindowManager {
         // Workaround for windows which can't be resized freely...
         // For ex. which only resize in full rows/columns like gnome-terminal
         window.tiledRect = newRect.copy();
+        window._tilingWorkspaceIndex = window.get_workspace()?.index();
 
         const { x, y, width, height } = newRect.addGaps(workArea);
 
@@ -1199,6 +1200,10 @@ var TilingWindowManager = class TilingWindowManager {
 
             this.tile(window, workArea, { openTilingPopup: false, skipAnim: true });
         } else if (window.isTiled) {
+            const workspace = window.get_workspace();
+            if (workspace && window._tilingWorkspaceIndex === workspace.index())
+                return;
+
             this.untile(window, { restoreFullPos: false, clampToWorkspace: true, skipAnim: Main.overview.visible });
         }
     }
