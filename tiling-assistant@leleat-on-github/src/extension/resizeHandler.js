@@ -56,6 +56,7 @@ var Handler = class TilingResizeHandler {
         this._displaySignals.push(g2);
 
         this._sizeChangedId = 0;
+        this._sizeChangedWindow = null;
         this._preGrabRects = new Map();
         // Save the windows, which are to be resized (passively) along the
         // actively grabbed one, and a resizeOp. A resizeOp saves the side
@@ -65,7 +66,28 @@ var Handler = class TilingResizeHandler {
     }
 
     destroy() {
+        if (this._sizeChangedId && this._sizeChangedWindow) {
+            try {
+                this._sizeChangedWindow.disconnect(this._sizeChangedId);
+            } catch (e) {}
+            this._sizeChangedId = 0;
+            this._sizeChangedWindow = null;
+        }
+
         this._displaySignals.forEach(sId => global.display.disconnect(sId));
+    }
+
+    _setSizeChangedSignal(window, callback) {
+        if (this._sizeChangedId && this._sizeChangedWindow) {
+            try {
+                this._sizeChangedWindow.disconnect(this._sizeChangedId);
+            } catch (e) {}
+            this._sizeChangedId = 0;
+            this._sizeChangedWindow = null;
+        }
+
+        this._sizeChangedWindow = window;
+        this._sizeChangedId = window.connect('size-changed', callback);
     }
 
     _onResizeStarted(window, grabOp) {
@@ -136,7 +158,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, grabOp, null));
                 break;
 
@@ -152,7 +174,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, grabOp, null));
                 break;
 
@@ -168,7 +190,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, null, grabOp));
                 break;
 
@@ -184,7 +206,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, null, grabOp));
                 break;
 
@@ -201,7 +223,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, Meta.GrabOp.RESIZING_N, Meta.GrabOp.RESIZING_W));
                 break;
 
@@ -217,7 +239,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, Meta.GrabOp.RESIZING_N, Meta.GrabOp.RESIZING_E));
                 break;
 
@@ -233,7 +255,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, Meta.GrabOp.RESIZING_S, Meta.GrabOp.RESIZING_W));
                 break;
 
@@ -249,7 +271,7 @@ var Handler = class TilingResizeHandler {
                     resizeOp && this._resizeOps.set(otherWindow, resizeOp);
                 }
 
-                this._sizeChangedId = window.connect('size-changed',
+                this._setSizeChangedSignal(window,
                     this._onResizing.bind(this, window, Meta.GrabOp.RESIZING_S, Meta.GrabOp.RESIZING_E));
         }
     }
@@ -259,6 +281,7 @@ var Handler = class TilingResizeHandler {
         if (this._sizeChangedId) {
             window.disconnect(this._sizeChangedId);
             this._sizeChangedId = 0;
+            this._sizeChangedWindow = null;
         }
 
         if (!window.isTiled)

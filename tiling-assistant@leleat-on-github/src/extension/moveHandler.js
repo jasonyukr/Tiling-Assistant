@@ -38,6 +38,9 @@ var Handler = class TilingMoveHandler {
         const wId = global.display.connect('window-entered-monitor', this._onMonitorEntered.bind(this));
         this._displaySignals.push(wId);
 
+        this._posChangedId = 0;
+        this._posChangedWindow = null;
+        this._cursorUpdatedId = 0;
         // Save the windows, which need to make space for the
         // grabbed window (this is for the so called 'adaptive mode'):
         // { window1: newTileRect1, window2: newTileRect2, ... }
@@ -51,6 +54,21 @@ var Handler = class TilingMoveHandler {
     }
 
     destroy() {
+        if (this._posChangedId && this._posChangedWindow) {
+            try {
+                this._posChangedWindow.disconnect(this._posChangedId);
+            } catch (e) {}
+            this._posChangedId = 0;
+            this._posChangedWindow = null;
+        }
+
+        if (this._cursorUpdatedId) {
+            try {
+                global.display.disconnect(this._cursorUpdatedId);
+            } catch (e) {}
+            this._cursorUpdatedId = 0;
+        }
+
         this._displaySignals.forEach(sId => global.display.disconnect(sId));
         this._tilePreview.destroy();
 
@@ -101,17 +119,31 @@ var Handler = class TilingMoveHandler {
             // cursor moved while holding the click. I assume a cursor change
             // means the grab was released since I couldn't find a better way...
             let grabReleased = false;
-            let cursorId = global.display.connect('cursor-updated', () => {
+            if (this._cursorUpdatedId) {
+                try {
+                    global.display.disconnect(this._cursorUpdatedId);
+                } catch (e) {}
+                this._cursorUpdatedId = 0;
+            }
+            this._cursorUpdatedId = global.display.connect('cursor-updated', () => {
                 grabReleased = true;
-                cursorId && global.display.disconnect(cursorId);
-                cursorId = 0;
+                if (this._cursorUpdatedId) {
+                    try {
+                        global.display.disconnect(this._cursorUpdatedId);
+                    } catch (e) {}
+                    this._cursorUpdatedId = 0;
+                }
             });
             // Clean up in case my assumption mentioned above is wrong
             // and the cursor never gets updated or something else...
             this._cursorChangeTimerId && GLib.Source.remove(this._cursorChangeTimerId);
             this._cursorChangeTimerId = GLib.timeout_add(GLib.PRIORITY_LOW, 400, () => {
-                cursorId && global.display.disconnect(cursorId);
-                cursorId = 0;
+                if (this._cursorUpdatedId) {
+                    try {
+                        global.display.disconnect(this._cursorUpdatedId);
+                    } catch (e) {}
+                    this._cursorUpdatedId = 0;
+                }
                 this._cursorChangeTimerId = null;
                 return GLib.SOURCE_REMOVE;
             });
@@ -157,6 +189,13 @@ var Handler = class TilingMoveHandler {
             const topTileGroup = Twm.getTopTileGroup({ skipTopWindow: true });
             const tRects = topTileGroup.map(w => w.tiledRect);
             const freeScreenRects = workArea.minus(tRects);
+            if (this._posChangedId && this._posChangedWindow) {
+                try {
+                    this._posChangedWindow.disconnect(this._posChangedId);
+                } catch (e) {}
+                this._posChangedId = 0;
+            }
+            this._posChangedWindow = window;
             this._posChangedId = window.connect('position-changed',
                 this._onMoving.bind(
                     this,
@@ -170,9 +209,22 @@ var Handler = class TilingMoveHandler {
     }
 
     _onMoveFinished(window) {
+        if (this._cursorUpdatedId) {
+            try {
+                global.display.disconnect(this._cursorUpdatedId);
+            } catch (e) {}
+            this._cursorUpdatedId = 0;
+        }
+
+        if (this._cursorChangeTimerId) {
+            GLib.Source.remove(this._cursorChangeTimerId);
+            this._cursorChangeTimerId = null;
+        }
+
         if (this._posChangedId) {
             window.disconnect(this._posChangedId);
             this._posChangedId = 0;
+            this._posChangedWindow = null;
         }
 
         if (this._tileRect) {
@@ -763,10 +815,12 @@ class TilePreview extends WindowManager.TilePreview {
         const changeMonitor = this._monitorIndex === -1 ||
             this._monitorIndex !== monitorIndex;
 
+        const monitor = Main.layoutManager.monitors[monitorIndex] ?? Main.layoutManager.primaryMonitor;
+        if (!monitor)
+            return;
+
         this._monitorIndex = monitorIndex;
         this._rect = tileRect;
-
-        const monitor = Main.layoutManager.monitors[monitorIndex];
 
         if (!this._showing || changeMonitor) {
             const monitorRect = new Meta.Rectangle({
