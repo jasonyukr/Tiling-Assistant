@@ -15,11 +15,12 @@ const Twm = Me.imports.src.extension.tilingWindowManager.TilingWindowManager;
 var Override = class AltTabOverride {
     constructor() {
         this._originalAltTab = AltTab.AppSwitcherPopup;
+        this._tileGroupsChangedId = 0;
 
         if (Settings.getBoolean(Settings.TILEGROUPS_IN_APP_SWITCHER))
             AltTab.AppSwitcherPopup = TilingAppSwitcherPopup;
 
-        Settings.changed(Settings.TILEGROUPS_IN_APP_SWITCHER, () => {
+        this._tileGroupsChangedId = Settings.getGioObject().connect(`changed::${Settings.TILEGROUPS_IN_APP_SWITCHER}`, () => {
             AltTab.AppSwitcherPopup = Settings.getBoolean(Settings.TILEGROUPS_IN_APP_SWITCHER)
                 ? TilingAppSwitcherPopup
                 : this._originalAltTab;
@@ -27,6 +28,10 @@ var Override = class AltTabOverride {
     }
 
     destroy() {
+        if (this._tileGroupsChangedId !== 0) {
+            Settings.getGioObject().disconnect(this._tileGroupsChangedId);
+            this._tileGroupsChangedId = 0;
+        }
         AltTab.AppSwitcherPopup = this._originalAltTab;
     }
 };
@@ -145,7 +150,7 @@ class TilingAppSwitcher extends AltTab.AppSwitcher {
         // Listen for the app stop state in case the app got closed outside
         // of the app switcher along with closing via the app switcher
         const allApps = windows.map(w => winTracker.get_window_app(w));
-        this._apps = [...new Set(allApps)];
+        this._apps = [...new Set(allApps)].filter(app => app != null);
         this._stateChangedIds = this._apps.map(app => app.connect('notify::state', () => {
             if (app.state !== Shell.AppState.RUNNING)
                 this.icons.forEach(item => item.removeApp(app));
@@ -156,9 +161,9 @@ class TilingAppSwitcher extends AltTab.AppSwitcher {
 
     _onDestroy() {
         if (this._mouseTimeOutId !== 0)
-            GLib.source_remove(this._mouseTimeOutId);
+            GLib.Source.remove(this._mouseTimeOutId);
 
-        this._stateChangedIds?.forEach((id, index) => this._apps[index].disconnect(id));
+        this._stateChangedIds?.forEach((id, index) => this._apps[index]?.disconnect(id));
         this._stateChangedIds = [];
         this._apps = [];
     }

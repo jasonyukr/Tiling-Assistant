@@ -133,6 +133,9 @@ var TilingSwitcherPopup = GObject.registerClass({
         // Clones to correctly shade the background for consecutive tiling.
         for (let i = 1; i < tileGroup.length; i++) {
             const wActor = tileGroup[i].get_compositor_private();
+            if (!wActor)
+                continue;
+
             const clone = new Clutter.Clone({
                 source: wActor,
                 x: wActor.x,
@@ -147,7 +150,8 @@ var TilingSwitcherPopup = GObject.registerClass({
         }
 
         const tActor = tiledWindow.get_compositor_private();
-        global.window_group.set_child_above_sibling(tActor, this._shadeBG);
+        if (tActor)
+            global.window_group.set_child_above_sibling(tActor, this._shadeBG);
     }
 
     vfunc_allocate(box) {

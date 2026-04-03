@@ -60,8 +60,9 @@ var LayoutManager = class TilingLayoutsManager {
 
         // Add panel indicator
         this._panelIndicator = new PanelIndicator();
+        this._showLayoutIndicatorChangedId = 0;
         Main.panel.addToStatusArea(Me.metadata.uuid, this._panelIndicator);
-        Settings.changed(Settings.SHOW_LAYOUT_INDICATOR, () => {
+        this._showLayoutIndicatorChangedId = Settings.getGioObject().connect(`changed::${Settings.SHOW_LAYOUT_INDICATOR}`, () => {
             this._panelIndicator.visible = Settings.getBoolean(Settings.SHOW_LAYOUT_INDICATOR);
         });
         this._panelIndicator.visible = Settings.getBoolean(Settings.SHOW_LAYOUT_INDICATOR);
@@ -71,6 +72,10 @@ var LayoutManager = class TilingLayoutsManager {
     destroy() {
         this._finishLayouting();
         this._keyBindings.forEach(key => Main.wm.removeKeybinding(key));
+        if (this._showLayoutIndicatorChangedId) {
+            Settings.getGioObject().disconnect(this._showLayoutIndicatorChangedId);
+            this._showLayoutIndicatorChangedId = 0;
+        }
         this._panelIndicator.destroy();
         this._panelIndicator = null;
     }
