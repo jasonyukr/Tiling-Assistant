@@ -253,6 +253,10 @@ function _loadAfterSessionLock() {
         window.isTiled = isTiled;
         window.tiledRect = jsToRect(tiledRect);
         window.untiledRect = jsToRect(untiledRect);
+        if (isTiled) {
+            window._tilingWorkspace = window.get_workspace();
+            window._tilingWorkspaceIndex = window._tilingWorkspace?.index();
+        }
     });
 
     const tileGroups = new Map(saveObj['tileGroups']);
