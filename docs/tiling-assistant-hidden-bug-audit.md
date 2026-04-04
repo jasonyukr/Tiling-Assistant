@@ -295,6 +295,98 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
 
 ---
 
+## Follow-up findings from second audit
+
+### [x] F1. Restarting a popup layout could inherit stale session state
+
+- **Status:** Fixed. Starting a new layout now clears the previous layout session first, invalidates in-flight app-launch callbacks, and tracks/disconnects the active popup so stale async completions from an earlier run cannot mutate the new layout.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/layoutsManager.js`
+- **Path:** `startLayouting()`, `_finishLayouting()`, `_openTilingPopup()`, `_onTilingPopupClosed()`
+- **Why risky:**
+  - a new layout could start while the previous popup or an `openAppTiled()` callback was still alive
+  - stale `_tiledWithLayout`, `_tiledWithLoop`, and `_remainingWindows` state could leak into the new run
+  - an older popup or app-launch completion could still act on manager state after a new layout had already taken over
+- **Likely user trouble:**
+  - wrong remaining-window sequence after restarting a layout
+  - rect alignment and tile-group shading inherited from the previous run
+  - canceled/closed popup from an earlier layout corrupts the current layout flow
+- **Suggested repro:**
+  - start any popup-driven layout
+  - while its tiling popup is still open, activate another layout from the panel or search popup
+  - confirm the second layout starts cleanly and the first popup no longer affects it
+
+### [x] F2. App switcher stale-window pruning could still miss closed windows
+
+- **Status:** Fixed. Tile-group app-switcher items now drop windows that are no longer open as well as windows whose tracked app already disappeared, so `cachedWindows` cannot retain a dead entry when app shutdown ordering races `WindowTracker` updates.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/altTab.js`
+- **Path:** `AppSwitcherItem.removeApp()`
+- **Why risky:**
+  - `removeApp()` filtered only by `winTracker.get_window_app(w) !== app`
+  - if `WindowTracker` already returned `null` for a just-closed window, that stale window survived the filter
+- **Likely user trouble:**
+  - tile-group app-switcher activation can still target a closed window after one app exits
+  - icon/thumbnail state can drift until the switcher is rebuilt
+- **Suggested repro:**
+  - enable tile groups in the app switcher
+  - create a tile-group entry with windows from different apps
+  - close one app and reopen the switcher immediately
+  - verify the remaining entry only targets live windows
+
+### [x] F3. Restore-window shortcut compatibility code could remove the wrong key
+
+- **Status:** Fixed. The compatibility path now removes `RESTORE_WINDOW` from the shortcut scan list only when that key is actually present, so the last unrelated shortcut entry is no longer dropped by `splice(-1, 1)`.
+
+- **File:** `tiling-assistant@leleat-on-github/extension.js`
+- **Path:** `enable()`
+- **Why risky:**
+  - `scKeys.splice(scKeys.indexOf(sc.RESTORE_WINDOW), 1)` ran unguarded
+  - if `RESTORE_WINDOW` was absent from `getAllKeys()`, `indexOf()` returned `-1`
+  - `splice(-1, 1)` then removed the final unrelated shortcut key from the conflict check
+- **Likely user trouble:**
+  - wrong shortcut could be skipped when checking for an older `<Super>Down` binding conflict
+  - restore-window migration logic could behave inconsistently depending on shortcut ordering
+- **Suggested repro:**
+  - arrange a shortcut list where `RESTORE_WINDOW` is absent from `getAllKeys()`
+  - enable the extension with another `<Super>Down` binding still present
+  - verify the compatibility check still scans the full remaining key list
+
+### [x] F4. Popup candidate pruning could remove the wrong open window
+
+- **Status:** Fixed. Tiling-popup candidate pruning now removes top-tile-group windows only when they are actually present in `openWindows`, so `splice(-1, 1)` cannot drop an unrelated popup candidate.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingWindowManager.js`
+- **Path:** `tryOpeningTilingPopup()`
+- **Why risky:**
+  - the previous code removed each top-tile-group window with `openWindows.splice(openWindows.indexOf(w), 1)`
+  - if a top-tile-group window was absent from `openWindows`, `indexOf()` returned `-1`
+  - the final unrelated candidate window was then removed instead
+- **Likely user trouble:**
+  - tiling popup can omit the wrong window from its choices
+  - popup may fail to appear because the candidate list was accidentally emptied
+- **Suggested repro:**
+  - create a state where a top-tile-group window is excluded from `getWindows()`
+  - tile another window so `tryOpeningTilingPopup()` runs
+  - verify the popup still offers the correct remaining open windows
+
+### [x] F5. Passive resize setup could drop the wrong companion window
+
+- **Status:** Fixed. Resize setup now removes the actively resized window from `topTileGroup` only when it is actually present, so passive-resize bookkeeping cannot lose an unrelated companion via `splice(-1, 1)`.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/resizeHandler.js`
+- **Path:** `_onResizeStarted()`
+- **Why risky:**
+  - the previous code did `topTileGroup.splice(topTileGroup.indexOf(window), 1)`
+  - if the actively grabbed window was missing from `topTileGroup`, `indexOf()` returned `-1`
+  - the last unrelated window in the group was removed from passive-resize handling
+- **Likely user trouble:**
+  - resizing one tiled window can fail to update the correct companion windows
+  - the wrong window gets excluded from synchronized resize behavior
+- **Suggested repro:**
+  - start a tiled resize while top-tile-group membership has drifted from the grabbed window
+  - continue resizing and verify the correct companion windows still resize together
+
 ## Lower-confidence behavior smells
 
 These may be intentional, but they are worth reviewing because users may report them as bugs:
