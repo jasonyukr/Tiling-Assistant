@@ -386,8 +386,8 @@ var Handler = class TilingMoveHandler {
         if (!untiledRect && !Meta.is_wayland_compositor())
             untiledRect = new Rect(rect);
 
-        const untiledWidth = untiledRect?.width ?? 1000;
         const postUntileRect = window.get_frame_rect();
+        const untiledWidth = untiledRect?.width ?? postUntileRect.width ?? rect.width;
 
         global.display.begin_grab_op(
             window,

@@ -91,6 +91,12 @@ class TileEditingMode extends St.Widget {
         this.add_child(this._selectIndicator);
     }
 
+    _syncWindows() {
+        const openWindows = new Set(Twm.getWindows(true));
+        this._windows = this._windows.filter(w => openWindows.has(w) && w.isTiled && w.tiledRect);
+        return this._windows;
+    }
+
     close() {
         if (this._haveModal) {
             Main.popModal(this);
@@ -140,6 +146,16 @@ class TileEditingMode extends St.Widget {
         // First switch mode, if a new mod is pressed.
         if (newMode !== this._mode)
             this._switchMode(newMode);
+
+        const selectedWindow = this._selectIndicator?.window;
+        this._syncWindows();
+        if (!this._windows.length) {
+            this.close();
+            return;
+        }
+
+        if (selectedWindow && !this._windows.includes(selectedWindow))
+            this._selectIndicator.focus(this._windows[0].tiledRect, this._windows[0]);
 
         // Handle the key press and get mode depending on that.
         newMode = this._keyHandler.handleKeyPress(keyEvent);
@@ -312,7 +328,8 @@ const DefaultKeyHandler = class DefaultKeyHandler {
             if (!window)
                 return Modes.DEFAULT;
 
-            this._windows.splice(this._windows.indexOf(window), 1);
+            const idx = this._windows.indexOf(window);
+            idx !== -1 && this._windows.splice(idx, 1);
             window.delete(global.get_current_time());
             const newWindow = this._windows[0];
             if (!newWindow)
@@ -327,7 +344,8 @@ const DefaultKeyHandler = class DefaultKeyHandler {
                 return Modes.DEFAULT;
 
             const selectedRect = window.tiledRect.copy();
-            this._windows.splice(this._windows.indexOf(window), 1);
+            const idx = this._windows.indexOf(window);
+            idx !== -1 && this._windows.splice(idx, 1);
             Twm.untile(window);
             if (!this._windows.length)
                 return Modes.CLOSE;
@@ -345,6 +363,7 @@ const DefaultKeyHandler = class DefaultKeyHandler {
             const allWs = Settings.getBoolean(Settings.POPUP_ALL_WORKSPACES);
             const openWindows = Twm.getWindows(allWs).filter(w => !this._windows.includes(w));
             const { TilingSwitcherPopup } = Me.imports.src.extension.tilingPopup;
+            const replacedRect = this._selectIndicator.rect.copy();
             const tilingPopup = new TilingSwitcherPopup(
                 openWindows,
                 this._selectIndicator.rect,
@@ -361,8 +380,10 @@ const DefaultKeyHandler = class DefaultKeyHandler {
                     return;
 
                 const { tiledWindow } = popup;
-                const replaced = this._windows.findIndex(w => w.tiledRect.equal(tiledWindow.tiledRect));
+                this._tileEditor._syncWindows();
+                const replaced = this._windows.findIndex(w => w.tiledRect?.equal(replacedRect));
                 replaced !== -1 && this._windows.splice(replaced, 1);
+                this._windows = this._windows.filter(w => w !== tiledWindow);
 
                 // Create the new tile group to allow 1 window to be part of multiple tile groups
                 Twm.updateTileGroup([tiledWindow, ...this._windows]);
@@ -393,6 +414,7 @@ const DefaultKeyHandler = class DefaultKeyHandler {
     _focusInDir(dir) {
         const activeWs = global.workspace_manager.get_active_workspace();
         const workArea = new Rect(activeWs.get_work_area_for_monitor(this._tileEditor.monitor));
+        this._tileEditor._syncWindows();
         const tiledRects = this._windows.map(w => w.tiledRect);
         const screenRects = tiledRects.concat(workArea.minus(tiledRects));
         const nearestRect = this._selectIndicator.rect.getNeighbor(dir, screenRects);

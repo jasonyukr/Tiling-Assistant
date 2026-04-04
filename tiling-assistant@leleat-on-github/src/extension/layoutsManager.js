@@ -248,7 +248,7 @@ var LayoutManager = class TilingLayoutsManager {
             const tiledWindow = tilingPopup.tiledWindow;
             this._tiledWithLayout.push(tiledWindow);
             const i = this._remainingWindows.indexOf(tiledWindow);
-            this._remainingWindows.splice(i, 1);
+            i !== -1 && this._remainingWindows.splice(i, 1);
 
             // Make all windows, which were tiled during the current loop,
             // share the current rect evenly -> like the 'Stack' part of a
