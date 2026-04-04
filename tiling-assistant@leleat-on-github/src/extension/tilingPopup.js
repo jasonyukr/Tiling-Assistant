@@ -316,9 +316,11 @@ var TilingSwitcherPopup = GObject.registerClass({
         // correctly after being focused.
         window.activate(global.get_current_time());
         Twm.tile(window, rect, { openTilingPopup: this._allowConsecutivePopup });
-        this.tiledWindow = window.isTiled || window.tiledRect || Twm.isMaximized(window)
-            ? window
-            : null;
+        this.tiledWindow = rect.equal(window.get_work_area_current_monitor())
+            ? (Twm.isMaximized(window, rect) ? window : null)
+            : window.tiledRect?.equal(rect)
+                ? window
+                : null;
     }
 
     // Dont _finish(), if no mods are pressed
