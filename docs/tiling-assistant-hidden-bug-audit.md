@@ -166,6 +166,25 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - lock/unlock with a visible tile group
   - verify tile-group raise and joint resize behavior still works
 
+### [x] P2. Session-lock restore only persists the active workspace
+
+- **Status:** Fixed. Session-lock save/restore now enumerates windows across all workspaces, so lock/unlock persistence no longer drops tiling metadata for non-active-workspace windows.
+
+- **File:** `tiling-assistant@leleat-on-github/extension.js`
+- **Path:** `_saveBeforeSessionLock()`, `_loadAfterSessionLock()`
+- **Why risky:**
+  - saved/restore window enumeration is limited to the active workspace
+  - `disable()` later deletes custom tiling properties for all windows
+  - windows on other workspaces can lose their tiling metadata across lock/unlock
+- **Likely user trouble:**
+  - tiled windows on non-active workspaces stop behaving as tiled after unlock
+  - untile / tile-group behavior becomes inconsistent until windows are re-tiled
+- **Suggested repro:**
+  - tile windows on multiple workspaces
+  - switch away from one of those workspaces
+  - lock and unlock the session
+  - revisit the other workspace and verify untiling / group behavior still works
+
 ---
 
 ## Priority 3
@@ -186,6 +205,24 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - start a layout
   - change the candidate window set while popup is open
   - confirm the next popup still offers the correct remaining windows
+
+### [x] P3. `appId` layout launches stay in `_remainingWindows`
+
+- **Status:** Fixed. Successful `appId` launches are now removed from `_remainingWindows` as soon as they are recorded in `_tiledWithLayout`, so later popup steps no longer offer already-placed windows again.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/layoutsManager.js`
+- **Path:** `_openAppTiled()`
+- **Why risky:**
+  - the launched window is tracked as already tiled for the layout
+  - later popup steps still build candidates from `_remainingWindows`
+  - the same launched window can be offered again and re-tiled into the wrong rect
+- **Likely user trouble:**
+  - multi-step layouts with `appId` entries can reuse a window that was already placed
+  - later popup steps may target the wrong remaining windows
+- **Suggested repro:**
+  - create a layout with at least one `appId` item followed by a popup-driven item
+  - activate the layout and let the app launch tile successfully
+  - verify the next popup does not offer the already launched window again
 
 ### [x] P3. Wayland drag-restore still has hardcoded fallback width
 
