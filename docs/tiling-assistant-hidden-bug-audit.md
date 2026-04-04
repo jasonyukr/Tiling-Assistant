@@ -170,7 +170,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
 
 ## Priority 3
 
-### [ ] P3. Layout manager can remove the wrong remaining window
+### [x] P3. Layout manager can remove the wrong remaining window
+
+- **Status:** Fixed. The layout manager now removes the just-tiled window from `_remainingWindows` only when it is actually present, so popup churn no longer splices the wrong entry on a missing match.
 
 - **File:** `tiling-assistant@leleat-on-github/src/extension/layoutsManager.js`
 - **Path:** `_onTilingPopupClosed()`
@@ -185,7 +187,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - change the candidate window set while popup is open
   - confirm the next popup still offers the correct remaining windows
 
-### [ ] P3. Wayland drag-restore still has hardcoded fallback width
+### [x] P3. Wayland drag-restore still has hardcoded fallback width
+
+- **Status:** Fixed. Wayland drag-restore now falls back to the live post-untile frame width instead of a hardcoded `1000`, which keeps pointer anchoring tied to real geometry.
 
 - **File:** `tiling-assistant@leleat-on-github/src/extension/moveHandler.js`
 - **Path:** `_restoreSizeAndRestartGrab()`
@@ -198,7 +202,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - on Wayland, drag tiled/maximized windows that lack stable untiled geometry
   - watch for jumpy restore/restart behavior
 
-### [ ] P3. Tile editing mode may drift from real window state
+### [x] P3. Tile editing mode may drift from real window state
+
+- **Status:** Fixed. Tile editing mode now synchronizes its local window list against live tiled windows before key handling and hardens delete/restore/popup replacement flows against stale entries.
 
 - **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
 - **Path:** multiple (`handleKeyPress()`, popup replacement flow, restore/delete flows)
