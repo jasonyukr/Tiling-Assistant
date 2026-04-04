@@ -915,7 +915,10 @@ var TilingWindowManager = class TilingWindowManager {
         const allWs = Settings.getBoolean(Settings.POPUP_ALL_WORKSPACES);
         const openWindows = this.getWindows(allWs);
         const topTileGroup = this.getTopTileGroup();
-        topTileGroup.forEach(w => openWindows.splice(openWindows.indexOf(w), 1));
+        topTileGroup.forEach(w => {
+            const idx = openWindows.indexOf(w);
+            idx !== -1 && openWindows.splice(idx, 1);
+        });
         if (!openWindows.length)
             return;
 

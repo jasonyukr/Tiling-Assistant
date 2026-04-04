@@ -141,7 +141,8 @@ var Handler = class TilingResizeHandler {
 
         // Remove the actively resizing window to get the windows, which will
         // be passively resized.
-        topTileGroup.splice(topTileGroup.indexOf(window), 1);
+        const windowIdx = topTileGroup.indexOf(window);
+        windowIdx !== -1 && topTileGroup.splice(windowIdx, 1);
         const grabbedRect = window.tiledRect;
 
         switch (grabOp) {

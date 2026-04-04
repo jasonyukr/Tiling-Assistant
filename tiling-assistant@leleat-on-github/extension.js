@@ -111,7 +111,8 @@ function enable() {
     // if an older shortcut already exists with Super+Down
     const sc = Me.imports.src.common.Shortcuts;
     const scKeys = sc.getAllKeys();
-    scKeys.splice(scKeys.indexOf(sc.RESTORE_WINDOW), 1);
+    const restoreWindowKeyIdx = scKeys.indexOf(sc.RESTORE_WINDOW);
+    restoreWindowKeyIdx !== -1 && scKeys.splice(restoreWindowKeyIdx, 1);
     if (scKeys.some(key => this._settings.getStrv(key).includes('<Super>Down')))
         this._settings.setStrv(sc.RESTORE_WINDOW, []);
 
