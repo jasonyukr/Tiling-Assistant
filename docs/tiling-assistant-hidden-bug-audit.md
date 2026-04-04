@@ -99,7 +99,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
 
 ## Priority 2
 
-### [ ] P2. Dynamic keyboard tiling depends on exact rect equality
+### [x] P2. Dynamic keyboard tiling depends on exact rect equality
+
+- **Status:** Fixed. Dynamic tiling state now matches the canonical tile rectangles with tolerance instead of relying on exact edge equality, so gaps and rounding drift no longer misclassify tiled halves and quarters.
 
 - **File:** `tiling-assistant@leleat-on-github/src/extension/keybindingHandler.js`
 - **Path:** `_dynamicTilingState()`
@@ -113,7 +115,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - use dynamic tiling state mode
   - test with gaps, fractional scaling, multi-monitor, and repeated directional hotkeys
 
-### [ ] P2. Popup cross-workspace retile ordering looks race-prone
+### [x] P2. Popup cross-workspace retile ordering looks race-prone
+
+- **Status:** Fixed. Cross-workspace popup tiling now clears stale tiling props before the workspace and monitor move, so workspace-change handlers do not observe old tile metadata during retile.
 
 - **File:** `tiling-assistant@leleat-on-github/src/extension/tilingPopup.js`
 - **Path:** `_tileWindow()`
@@ -129,7 +133,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - choose a tiled window from another workspace
   - observe for temporary geometry jumps or incorrect untiling
 
-### [ ] P2. Session restore can revive stale tiling metadata
+### [x] P2. Session restore can revive stale tiling metadata
+
+- **Status:** Fixed. Session restore now validates restored tiled state against the current work area and drops stale tiling metadata instead of blindly reattaching pre-lock geometry after topology changes.
 
 - **File:** `tiling-assistant@leleat-on-github/extension.js`
 - **Path:** `_saveBeforeSessionLock()`, `_loadAfterSessionLock()`
@@ -145,7 +151,9 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - change monitor setup or workspace context if possible
   - unlock and test raise/untiling/resize behavior
 
-### [ ] P2. Session-lock tile-group restore identity mismatch
+### [x] P2. Session-lock tile-group restore identity mismatch
+
+- **Status:** Fixed. Session-lock persistence now stores tile groups in stable-sequence terms and rebuilds them against the current runtime window IDs on restore, so group raise/resize wiring uses the correct post-unlock identities.
 
 - **File:** `tiling-assistant@leleat-on-github/extension.js`
 - **Path:** `_saveBeforeSessionLock()`, `_loadAfterSessionLock()`
