@@ -63,7 +63,6 @@ class TilingAppSwitcherPopup extends AltTab.AppSwitcherPopup {
         if (!item)
             return;
 
-        const selectedIndex = this._selectedIndex;
         item.cachedWindows.forEach(w => w.delete(global.get_current_time()));
         item.cachedWindows = [];
         this._switcherList._removeIcon(item);
