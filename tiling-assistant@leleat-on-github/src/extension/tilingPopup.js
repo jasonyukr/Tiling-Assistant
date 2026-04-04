@@ -251,14 +251,14 @@ var TilingSwitcherPopup = GObject.registerClass({
     }
 
     _windowActivated(thumbnailSwitcher, n) {
-        const window = this._items[this._selectedIndex].cachedWindows[n];
+        const window = this._items[this._selectedIndex]?.cachedWindows?.[n];
         this._tileWindow(window);
         this.fadeAndDestroy();
     }
 
     _finish(timestamp) {
         const appIcon = this._items[this._selectedIndex];
-        const window = appIcon.cachedWindows[Math.max(0, this._currentWindow)];
+        const window = appIcon?.cachedWindows?.[Math.max(0, this._currentWindow)];
         this._tileWindow(window);
         SwitcherPopup.SwitcherPopup.prototype._finish.call(this, timestamp);
     }
@@ -278,6 +278,11 @@ var TilingSwitcherPopup = GObject.registerClass({
     }
 
     _tileWindow(window) {
+        if (!window) {
+            this.tiledWindow = null;
+            return;
+        }
+
         let rect = this._freeScreenRect;
 
         // Halve the tile rect.
@@ -295,7 +300,7 @@ var TilingSwitcherPopup = GObject.registerClass({
             rect = rect.getUnitAt(idx, rect[size] / 2, orientation);
         }
 
-        this.tiledWindow = window;
+        this.tiledWindow = null;
 
         // Clear stale tiling props before workspace/monitor changes so the old
         // workspace-changed and tile-group state can't react during the move.
@@ -311,6 +316,9 @@ var TilingSwitcherPopup = GObject.registerClass({
         // correctly after being focused.
         window.activate(global.get_current_time());
         Twm.tile(window, rect, { openTilingPopup: this._allowConsecutivePopup });
+        this.tiledWindow = window.isTiled || window.tiledRect || Twm.isMaximized(window)
+            ? window
+            : null;
     }
 
     // Dont _finish(), if no mods are pressed
