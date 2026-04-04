@@ -27,9 +27,8 @@ var TilingWindowManager = class TilingWindowManager {
         this._wsAddedId = global.workspace_manager.connect('workspace-added', this._onWorkspaceAdded.bind(this));
         this._wsRemovedId = global.workspace_manager.connect('workspace-removed', this._onWorkspaceRemoved.bind(this));
 
-        this._openAppTiledCreateId = 0;
-        this._openAppTiledFirstFrameId = 0;
-        this._openAppTiledFirstFrameActor = null;
+        this._openAppTiledRequests = [];
+        this._openAppTiledClaimedWindowIds = new Set();
     }
 
     static destroy() {
@@ -43,11 +42,8 @@ var TilingWindowManager = class TilingWindowManager {
 
         this._tileGroups.clear();
         this._unmanagingWindows = [];
-
-        if (this._openAppTiledTimerId) {
-            GLib.Source.remove(this._openAppTiledTimerId);
-            this._openAppTiledTimerId = null;
-        }
+        this._openAppTiledRequests = [];
+        this._openAppTiledClaimedWindowIds.clear();
 
         if (this._wsAddedTimer) {
             GLib.Source.remove(this._wsAddedTimer);
@@ -61,21 +57,33 @@ var TilingWindowManager = class TilingWindowManager {
     }
 
     static _clearOpenAppTiledSignals() {
-        if (this._openAppTiledCreateId) {
-            try {
-                global.display.disconnect(this._openAppTiledCreateId);
-            } catch (e) {}
-            this._openAppTiledCreateId = 0;
-        }
+        this._openAppTiledRequests.forEach(request => {
+            if (request.timeoutId) {
+                GLib.Source.remove(request.timeoutId);
+                request.timeoutId = 0;
+            }
 
-        if (this._openAppTiledFirstFrameId && this._openAppTiledFirstFrameActor) {
-            try {
-                this._openAppTiledFirstFrameActor.disconnect(this._openAppTiledFirstFrameId);
-            } catch (e) {}
-            this._openAppTiledFirstFrameId = 0;
-        }
+            if (request.createId) {
+                try {
+                    global.display.disconnect(request.createId);
+                } catch (e) {}
+                request.createId = 0;
+            }
 
-        this._openAppTiledFirstFrameActor = null;
+            request.firstFrames?.forEach(({ actor, id }) => {
+                if (!actor || !id)
+                    return;
+
+                try {
+                    actor.disconnect(id);
+                } catch (e) {}
+            });
+            request.firstFrames?.clear();
+            request.claimedWindowId = 0;
+        });
+
+        this._openAppTiledRequests = [];
+        this._openAppTiledClaimedWindowIds.clear();
     }
 
     static connect(signal, func) {
@@ -951,18 +959,76 @@ var TilingWindowManager = class TilingWindowManager {
         if (!app?.can_open_new_window())
             return;
 
-        this._clearOpenAppTiledSignals();
-        this._openAppTiledCreateId = global.display.connect('window-created', (src, window) => {
-            const wActor = window.get_compositor_private();
-            this._openAppTiledFirstFrameActor = wActor;
-            this._openAppTiledFirstFrameId = wActor?.connect('first-frame', () => {
-                if (this._openAppTiledFirstFrameId && this._openAppTiledFirstFrameActor) {
-                    try {
-                        this._openAppTiledFirstFrameActor.disconnect(this._openAppTiledFirstFrameId);
-                    } catch (e) {}
+        const request = {
+            app,
+            rect: rect.copy(),
+            openTilingPopup,
+            createId: 0,
+            timeoutId: 0,
+            firstFrames: new Map(),
+            claimedWindowId: 0,
+            done: false,
+            clear: () => {
+                if (request.done)
+                    return;
+
+                request.done = true;
+
+                if (request.timeoutId) {
+                    GLib.Source.remove(request.timeoutId);
+                    request.timeoutId = 0;
                 }
-                this._openAppTiledFirstFrameId = 0;
-                this._openAppTiledFirstFrameActor = null;
+
+                if (request.createId) {
+                    try {
+                        global.display.disconnect(request.createId);
+                    } catch (e) {}
+                    request.createId = 0;
+                }
+
+                request.firstFrames.forEach(({ actor, id }) => {
+                    if (!actor || !id)
+                        return;
+
+                    try {
+                        actor.disconnect(id);
+                    } catch (e) {}
+                });
+                request.firstFrames.clear();
+
+                if (request.claimedWindowId) {
+                    const claimedWindowId = request.claimedWindowId;
+                    request.claimedWindowId = 0;
+                    GLib.idle_add(GLib.PRIORITY_DEFAULT_IDLE, () => {
+                        this._openAppTiledClaimedWindowIds.delete(claimedWindowId);
+                        return GLib.SOURCE_REMOVE;
+                    });
+                }
+
+                const idx = this._openAppTiledRequests.indexOf(request);
+                if (idx !== -1)
+                    this._openAppTiledRequests.splice(idx, 1);
+            }
+        };
+
+        this._openAppTiledRequests.push(request);
+
+        request.createId = global.display.connect('window-created', (src, window) => {
+            if (request.done)
+                return;
+
+            const windowId = window.get_id();
+            const wActor = window.get_compositor_private();
+            const previous = request.firstFrames.get(windowId);
+            if (previous?.actor && previous?.id) {
+                try {
+                    previous.actor.disconnect(previous.id);
+                } catch (e) {}
+            }
+
+            const firstFrameId = wActor?.connect('first-frame', () => {
+                if (request.done)
+                    return;
 
                 const winTracker = Shell.WindowTracker.get_default();
                 const openedWindowApp = winTracker.get_window_app(window);
@@ -970,25 +1036,33 @@ var TilingWindowManager = class TilingWindowManager {
                 // to be moved and resized because, for example, Steam uses a
                 // WindowType.Normal window for their loading screen, which we
                 // don't want to trigger the tiling for.
-                if (this._openAppTiledCreateId && openedWindowApp && openedWindowApp === app &&
-                        (window.allows_resize() && window.allows_move() || window.get_maximized())
+                if (openedWindowApp && openedWindowApp === app &&
+                        (window.allows_resize() && window.allows_move() || window.get_maximized()) &&
+                        !this._openAppTiledClaimedWindowIds.has(windowId)
                 ) {
+                    // Claim the window so overlapping launch requests don't tile it twice.
+                    this._openAppTiledClaimedWindowIds.add(windowId);
+                    request.claimedWindowId = windowId;
                     try {
-                        global.display.disconnect(this._openAppTiledCreateId);
-                    } catch (e) {}
-                    this._openAppTiledCreateId = 0;
-                    this.tile(window, rect, { openTilingPopup, skipAnim: true });
+                        this.tile(window, request.rect, {
+                            openTilingPopup: request.openTilingPopup,
+                            skipAnim: true
+                        });
+                    } finally {
+                        request.clear();
+                    }
                 }
-            });
+            }) ?? 0;
+            request.firstFrames.set(windowId, { actor: wActor, id: firstFrameId });
 
             // Don't immediately disconnect the signal in case the launched
             // window doesn't match the original app. It may be a loading screen
             // or the user started an app inbetween etc... but in case the checks/
             // signals above fail disconnect the signals after 1 min at the latest
-            this._openAppTiledTimerId && GLib.Source.remove(this._openAppTiledTimerId);
-            this._openAppTiledTimerId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 60000, () => {
-                this._clearOpenAppTiledSignals();
-                this._openAppTiledTimerId = null;
+            if (request.timeoutId)
+                GLib.Source.remove(request.timeoutId);
+            request.timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 60000, () => {
+                request.clear();
                 return GLib.SOURCE_REMOVE;
             });
         });
