@@ -266,7 +266,11 @@ var AppSwitcherItem = GObject.registerClass({
     // Remove an AppIcon to the corresponding app.
     removeApp(app) {
         const winTracker = Shell.WindowTracker.get_default();
-        this.cachedWindows = this.cachedWindows.filter(w => winTracker.get_window_app(w) !== app);
+        const openWindows = new Set(global.display.get_tab_list(Meta.TabList.NORMAL_ALL, null));
+        this.cachedWindows = this.cachedWindows.filter(w => {
+            const trackedApp = winTracker.get_window_app(w);
+            return openWindows.has(w) && trackedApp && trackedApp !== app;
+        });
         this.updateAppIcons();
     }
 });

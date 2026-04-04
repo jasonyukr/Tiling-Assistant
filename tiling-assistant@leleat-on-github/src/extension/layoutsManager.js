@@ -53,6 +53,9 @@ var LayoutManager = class TilingLayoutsManager {
         this._tiledWithLayout = [];
         this._tiledWithLoop = [];
         this._remainingWindows = [];
+        this._layoutingSession = null;
+        this._tilingPopup = null;
+        this._tilingPopupClosedId = 0;
 
         // Bind the keyboard shortcuts for each layout and the layout searchers
         this._keyBindings = [];
@@ -105,6 +108,9 @@ var LayoutManager = class TilingLayoutsManager {
         if (!layout)
             return;
 
+        this._finishLayouting();
+        this._layoutingSession = {};
+
         const allWs = Settings.getBoolean(Settings.POPUP_ALL_WORKSPACES);
         this._remainingWindows = Twm.getWindows(allWs);
         this._items = new Layout(layout).getItems();
@@ -126,6 +132,9 @@ var LayoutManager = class TilingLayoutsManager {
     }
 
     _finishLayouting() {
+        this._clearTilingPopup(true);
+
+        this._layoutingSession = null;
         this._items = [];
         this._currItem = null;
         this._currRect = null;
@@ -136,6 +145,24 @@ var LayoutManager = class TilingLayoutsManager {
         this._tiledWithLayout = [];
         this._tiledWithLoop = [];
         this._remainingWindows = [];
+    }
+
+    _clearTilingPopup(destroy = false) {
+        const popup = this._tilingPopup;
+        if (!popup)
+            return;
+
+        if (this._tilingPopupClosedId) {
+            try {
+                popup.disconnect(this._tilingPopupClosedId);
+            } catch (e) {}
+            this._tilingPopupClosedId = 0;
+        }
+
+        this._tilingPopup = null;
+
+        if (destroy && !popup._alreadyDestroyed)
+            popup.fadeAndDestroy();
     }
 
     _step(loopType = null) {
@@ -176,6 +203,7 @@ var LayoutManager = class TilingLayoutsManager {
     }
 
     _openAppTiled(appId) {
+        const session = this._layoutingSession;
         const app = Shell.AppSystem.get_default().lookup_app(appId);
         if (!app) {
             Main.notify('Tiling Assistant', _('Popup Layouts: App not found.'));
@@ -185,6 +213,9 @@ var LayoutManager = class TilingLayoutsManager {
 
         if (app.can_open_new_window()) {
             Twm.openAppTiled(app, this._currRect, false, window => {
+                if (session !== this._layoutingSession)
+                    return;
+
                 if (window) {
                     this._tiledWithLayout.push(window);
                     const i = this._remainingWindows.indexOf(window);
@@ -254,10 +285,18 @@ var LayoutManager = class TilingLayoutsManager {
             return;
         }
 
-        popup.connect('closed', this._onTilingPopupClosed.bind(this));
+        this._clearTilingPopup();
+        this._tilingPopup = popup;
+        this._tilingPopupClosedId = popup.connect('closed', this._onTilingPopupClosed.bind(this));
     }
 
     _onTilingPopupClosed(tilingPopup, canceled) {
+        if (tilingPopup !== this._tilingPopup)
+            return;
+
+        this._tilingPopup = null;
+        this._tilingPopupClosedId = 0;
+
         if (canceled) {
             if (this._currItem.loopType) {
                 this._tiledWithLoop = [];
