@@ -387,6 +387,40 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - start a tiled resize while top-tile-group membership has drifted from the grabbed window
   - continue resizing and verify the correct companion windows still resize together
 
+### [x] F6. Tiling popup success detection could still accept stale tile state
+
+- **Status:** Fixed. Tiling-popup completion now checks the actual post-tile result for the requested rect instead of trusting pre-existing `isTiled` / `tiledRect` state, so false success can no longer come from stale window metadata.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingPopup.js`
+- **Path:** `_tileWindow()`
+- **Why risky:**
+  - the popup cleared tiling props, moved the window, and then inferred success from `window.isTiled || window.tiledRect || Twm.isMaximized(window)`
+  - stale tiling metadata could still make the popup think the requested tile succeeded when it had not
+- **Likely user trouble:**
+  - popup-driven tiling can report success even when the requested tile state did not stick
+  - follow-up layout or popup sequencing can advance as if a window was tiled successfully
+- **Suggested repro:**
+  - tile a window that already carries stale tiling metadata
+  - choose a popup candidate that moves between workspaces or monitors
+  - verify the popup only reports success when the window actually lands in the requested rect
+
+### [x] F7. App switcher selection could drift after removing a group or icon
+
+- **Status:** Fixed. The custom app switcher now re-clamps selection after removing an item, so popup selection cannot stay on a stale index after a group or icon disappears.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/altTab.js`
+- **Path:** `_quitApplication()`, `_removeIcon()`
+- **Why risky:**
+  - removing an item from the custom switcher left `_selectedIndex` pointing at the old position
+  - follow-up selection-based code could then read the wrong item or run against an out-of-range index
+- **Likely user trouble:**
+  - closing an item from the switcher could leave the highlight on the wrong entry
+  - later thumbnail or cached-window updates could target the wrong item
+- **Suggested repro:**
+  - open the tile-group app switcher
+  - remove the currently selected item or an item before it
+  - verify the highlight and follow-up actions stay on a valid remaining item
+
 ## Lower-confidence behavior smells
 
 These may be intentional, but they are worth reviewing because users may report them as bugs:
