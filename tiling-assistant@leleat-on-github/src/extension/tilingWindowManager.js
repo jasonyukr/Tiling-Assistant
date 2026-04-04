@@ -21,8 +21,9 @@ var TilingWindowManager = class TilingWindowManager {
         // { windowId1: [windowIdX, windowIdY, ...], windowId2: [...], ... }
         this._tileGroups = new Map();
 
-        // [windowIds]
-        this._unmanagingWindows = [];
+        // [stableSequence]
+        this._unmanagingWindows = new Set();
+        this._unmanagingWindowsTimers = new Map();
 
         this._wsAddedId = global.workspace_manager.connect('workspace-added', this._onWorkspaceAdded.bind(this));
         this._wsRemovedId = global.workspace_manager.connect('workspace-removed', this._onWorkspaceRemoved.bind(this));
@@ -41,7 +42,9 @@ var TilingWindowManager = class TilingWindowManager {
         global.workspace_manager.disconnect(this._wsRemovedId);
 
         this._tileGroups.clear();
-        this._unmanagingWindows = [];
+        this._unmanagingWindows.clear();
+        this._unmanagingWindowsTimers.forEach(timeoutId => GLib.Source.remove(timeoutId));
+        this._unmanagingWindowsTimers.clear();
         this._openAppTiledRequests = [];
         this._openAppTiledClaimedWindowIds.clear();
 
@@ -407,10 +410,7 @@ var TilingWindowManager = class TilingWindowManager {
             const unmanagingSignal = signals.get(TilingSignals.UNMANAGING);
             unmanagingSignal && window.disconnect(unmanagingSignal);
 
-            const umId = window.connect('unmanaging', w => {
-                this.clearTilingProps(windowId);
-                this._unmanagingWindows.push(w.get_stable_sequence());
-            });
+            const umId = window.connect('unmanaging', w => this._markWindowUnmanaging(w));
             signals.set(TilingSignals.UNMANAGING, umId);
 
             // Reconnect ws-changed signal
@@ -1224,10 +1224,7 @@ var TilingWindowManager = class TilingWindowManager {
         const unmanagingSignal = signals.get(TilingSignals.UNMANAGING);
         unmanagingSignal && window.disconnect(unmanagingSignal);
 
-        const umId = window.connect('unmanaging', w => {
-            this.clearTilingProps(window.get_id());
-            this._unmanagingWindows.push(w.get_stable_sequence());
-        });
+        const umId = window.connect('unmanaging', w => this._markWindowUnmanaging(w));
         signals.set(TilingSignals.UNMANAGING, umId);
 
         // Refresh 'workspace-changed' signal
@@ -1253,6 +1250,24 @@ var TilingWindowManager = class TilingWindowManager {
      */
     static _getWindow(id) {
         return this._getAllWindows().find(w => w.get_id() === id);
+    }
+
+    static _markWindowUnmanaging(window) {
+        this.clearTilingProps(window.get_id());
+
+        const stableSequence = window.get_stable_sequence();
+        this._unmanagingWindows.add(stableSequence);
+
+        const oldTimeoutId = this._unmanagingWindowsTimers.get(stableSequence);
+        if (oldTimeoutId)
+            GLib.Source.remove(oldTimeoutId);
+
+        const timeoutId = GLib.timeout_add(GLib.PRIORITY_DEFAULT, 1000, () => {
+            this._unmanagingWindows.delete(stableSequence);
+            this._unmanagingWindowsTimers.delete(stableSequence);
+            return GLib.SOURCE_REMOVE;
+        });
+        this._unmanagingWindowsTimers.set(stableSequence, timeoutId);
     }
 
     /**
@@ -1313,8 +1328,16 @@ var TilingWindowManager = class TilingWindowManager {
         // crash, if we try to operate on it any further. So we listen to the
         // 'unmanaging'-signal to see, if there is a 'true  workspace change'
         // or wether the window was just closed
-        if (this._unmanagingWindows.includes(window.get_stable_sequence()))
+        const stableSequence = window.get_stable_sequence();
+        if (this._unmanagingWindows.has(stableSequence)) {
+            this._unmanagingWindows.delete(stableSequence);
+            const timeoutId = this._unmanagingWindowsTimers.get(stableSequence);
+            if (timeoutId) {
+                GLib.Source.remove(timeoutId);
+                this._unmanagingWindowsTimers.delete(stableSequence);
+            }
             return;
+        }
 
         if (this._ignoreWsChange)
             return;
