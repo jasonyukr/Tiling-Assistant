@@ -133,6 +133,24 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - choose a tiled window from another workspace
   - observe for temporary geometry jumps or incorrect untiling
 
+### [x] P2. `appId` layout loops stop after the seeded app launch
+
+- **Status:** Fixed. Layout activation now treats `appId` loop items as a seeded loop: the attached app is launched once into the loop rect, existing looped windows are redistributed immediately, and subsequent loop iterations switch to the Tiling Popup instead of skipping the loop or relaunching the app forever.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/layoutsManager.js`
+- **Path:** `_step()`, `_openAppTiled()`
+- **Why risky:**
+  - layout items allow both `appId` and `loopType`
+  - `_openAppTiled()` always advanced with `this._step()`
+  - loop continuation was only implemented for popup-driven items in `_onTilingPopupClosed()`
+- **Likely user trouble:**
+  - master-and-stack style layouts cannot be seeded with an app launch
+  - loop items with an attached app only place the launched app, then jump to the next layout item
+- **Suggested repro:**
+  - create a layout item with both `appId` and `loopType`
+  - activate the layout and let the app launch tile into that rect
+  - verify the next step keeps tiling into the same rect via the popup instead of advancing immediately
+
 ### [x] P2. Session restore can revive stale tiling metadata
 
 - **Status:** Fixed. Session restore now validates restored tiled state against the current work area and drops stale tiling metadata instead of blindly reattaching pre-lock geometry after topology changes.

@@ -171,7 +171,7 @@ var LayoutManager = class TilingLayoutsManager {
             this._currRect.tryAlignWith(workArea);
         }
 
-        const appId = this._currItem.appId;
+        const appId = loopType ? null : this._currItem.appId;
         appId ? this._openAppTiled(appId) : this._openTilingPopup();
     }
 
@@ -189,7 +189,24 @@ var LayoutManager = class TilingLayoutsManager {
                     this._tiledWithLayout.push(window);
                     const i = this._remainingWindows.indexOf(window);
                     i !== -1 && this._remainingWindows.splice(i, 1);
+
+                    if (this._currItem.loopType) {
+                        this._tiledWithLoop.push(window);
+                        this._tiledWithLoop.forEach((w, idx) => {
+                            const rect = this._currRect.copy();
+                            const [pos, dimension] = this._currItem.loopType === 'h'
+                                ? ['y', 'height']
+                                : ['x', 'width'];
+                            rect[dimension] /= this._tiledWithLoop.length;
+                            rect[pos] += idx * rect[dimension];
+                            Twm.tile(w, rect, { openTilingPopup: false, skipAnim: true });
+                        });
+
+                        this._step(this._currItem.loopType);
+                        return;
+                    }
                 }
+
                 this._step();
             });
         } else {
