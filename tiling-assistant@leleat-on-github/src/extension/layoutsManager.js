@@ -184,13 +184,15 @@ var LayoutManager = class TilingLayoutsManager {
         }
 
         if (app.can_open_new_window()) {
-            Twm.openAppTiled(app, this._currRect);
+            Twm.openAppTiled(app, this._currRect, false, window => {
+                window && this._tiledWithLayout.push(window);
+                this._step();
+            });
         } else {
             // Should we search for an open instance of the app and tile that?
             // Would we move it across workspaces and monitors?
+            this._step();
         }
-
-        this._step();
     }
 
     _openTilingPopup() {

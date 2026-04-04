@@ -51,6 +51,8 @@ var Handler = class TilingMoveHandler {
 
         this._favoritePreviews = [];
         this._tilePreview = new TilePreview();
+        const [pointerX, pointerY] = global.get_pointer();
+        this._lastPointerPos = { x: pointerX, y: pointerY };
     }
 
     destroy() {
@@ -106,6 +108,7 @@ var Handler = class TilingMoveHandler {
         // maximized so we need to restore its size to pre-tiling.
         this._wasMaximizedOnStart = window.get_maximized();
         const [eventX, eventY] = global.get_pointer();
+        this._lastPointerPos = { x: eventX, y: eventY };
 
         // Try to restore the window size
         const restoreSetting = Settings.getString(Settings.RESTORE_SIZE_ON);

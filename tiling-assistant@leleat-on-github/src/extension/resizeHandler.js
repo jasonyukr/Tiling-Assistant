@@ -284,8 +284,11 @@ var Handler = class TilingResizeHandler {
             this._sizeChangedWindow = null;
         }
 
-        if (!window.isTiled)
+        if (!window.isTiled) {
+            this._preGrabRects.clear();
+            this._resizeOps.clear();
             return;
+        }
 
         const screenGap = Settings.getInt(Settings.SCREEN_GAP);
         const windowGap = Settings.getInt(Settings.WINDOW_GAP);
@@ -297,6 +300,11 @@ var Handler = class TilingResizeHandler {
         // x / y and resizing on the N or W side will translate into a 1:1 shift
         const grabbedsNewRect = new Rect(window.get_frame_rect());
         const grabbedsOldRect = this._preGrabRects.get(window);
+        if (!grabbedsOldRect) {
+            this._preGrabRects.clear();
+            this._resizeOps.clear();
+            return;
+        }
 
         const isResizingW = (grabOp & Meta.GrabOp.RESIZING_W) > 1;
         // Shift the tiledRect by the resize amount

@@ -955,7 +955,7 @@ var TilingWindowManager = class TilingWindowManager {
      * @param {boolean} [openTilingPopup=false] allow the Tiling Popup to
      *      appear, if there is free screen space after the `app` was tiled.
      */
-    static openAppTiled(app, rect, openTilingPopup = false) {
+    static openAppTiled(app, rect, openTilingPopup = false, onComplete = null) {
         if (!app?.can_open_new_window())
             return;
 
@@ -963,16 +963,19 @@ var TilingWindowManager = class TilingWindowManager {
             app,
             rect: rect.copy(),
             openTilingPopup,
+            onComplete,
             createId: 0,
             timeoutId: 0,
             firstFrames: new Map(),
             claimedWindowId: 0,
             done: false,
-            clear: () => {
+            clear: tiledWindow => {
                 if (request.done)
                     return;
 
                 request.done = true;
+                const callback = request.onComplete;
+                request.onComplete = null;
 
                 if (request.timeoutId) {
                     GLib.Source.remove(request.timeoutId);
@@ -1008,6 +1011,8 @@ var TilingWindowManager = class TilingWindowManager {
                 const idx = this._openAppTiledRequests.indexOf(request);
                 if (idx !== -1)
                     this._openAppTiledRequests.splice(idx, 1);
+
+                callback?.(tiledWindow ?? null);
             }
         };
 
@@ -1049,7 +1054,7 @@ var TilingWindowManager = class TilingWindowManager {
                             skipAnim: true
                         });
                     } finally {
-                        request.clear();
+                        request.clear(window);
                     }
                 }
             }) ?? 0;
