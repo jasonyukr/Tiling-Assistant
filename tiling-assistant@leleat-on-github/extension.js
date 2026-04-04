@@ -201,9 +201,25 @@ function _saveBeforeSessionLock() {
         };
     });
 
+    const stableSequences = new Map(openWindows.map(w => [w.get_id(), w.get_stable_sequence()]));
+    const savedTileGroups = Array.from(this._twm.getTileGroups()).reduce((groups, [windowId, tileGroup]) => {
+        const stableWindowId = stableSequences.get(windowId);
+        if (!stableWindowId)
+            return groups;
+
+        const stableTileGroup = tileGroup
+            .map(id => stableSequences.get(id))
+            .filter(id => id !== undefined);
+        if (!stableTileGroup.length)
+            return groups;
+
+        groups.push([stableWindowId, stableTileGroup]);
+        return groups;
+    }, []);
+
     const saveObj = {
         'windows': savedWindows,
-        'tileGroups': Array.from(this._twm.getTileGroups())
+        'tileGroups': savedTileGroups
     };
 
     const userPath = GLib.get_user_config_dir();
@@ -251,6 +267,7 @@ function _loadAfterSessionLock() {
     }
 
     const openWindows = this._twm.getWindows(false);
+    const stableWindowMap = new Map(openWindows.map(w => [w.get_stable_sequence(), w]));
 
     const jsToRect = jsRect => {
         if (!jsRect || typeof jsRect !== 'object')
@@ -269,16 +286,25 @@ function _loadAfterSessionLock() {
             return;
 
         const { windowId, isTiled, tiledRect, untiledRect } = wObj;
-        const window = openWindows.find(w => w.get_stable_sequence() === windowId);
+        const window = stableWindowMap.get(windowId);
         if (!window)
             return;
 
         const restoredTiledRect = jsToRect(tiledRect);
         const restoredUntiledRect = jsToRect(untiledRect);
+        const workArea = new Rect(window.get_work_area_current_monitor());
+        const normalizeRect = rect => rect?.copy().tryAlignWith(workArea) ?? null;
+        const isWithinWorkArea = rect => rect && rect.width > 0 && rect.height > 0 &&
+            rect.x >= workArea.x - 4 &&
+            rect.y >= workArea.y - 4 &&
+            rect.x2 <= workArea.x2 + 4 &&
+            rect.y2 <= workArea.y2 + 4;
+        const normalizedTiledRect = normalizeRect(restoredTiledRect);
+        const canRestoreTiledState = !!restoredUntiledRect && isWithinWorkArea(normalizedTiledRect);
 
-        window.isTiled = !!isTiled && !!restoredTiledRect && !!restoredUntiledRect;
-        window.tiledRect = restoredTiledRect;
-        window.untiledRect = restoredUntiledRect;
+        window.isTiled = !!isTiled && canRestoreTiledState;
+        window.tiledRect = canRestoreTiledState ? normalizedTiledRect : null;
+        window.untiledRect = canRestoreTiledState ? restoredUntiledRect : null;
         if (window.isTiled) {
             window._tilingWorkspace = window.get_workspace();
             window._tilingWorkspaceIndex = window._tilingWorkspace?.index();
@@ -289,14 +315,30 @@ function _loadAfterSessionLock() {
     });
 
     const tileGroups = Array.isArray(saveObj['tileGroups'])
-        ? new Map(saveObj['tileGroups'].filter(entry => Array.isArray(entry) && entry.length === 2))
+        ? saveObj['tileGroups'].reduce((groups, entry) => {
+            if (!Array.isArray(entry) || entry.length !== 2)
+                return groups;
+
+            const [windowStableId, tileGroupStableIds] = entry;
+            const window = stableWindowMap.get(windowStableId);
+            if (!window || !Array.isArray(tileGroupStableIds) || !window.tiledRect || !window.untiledRect)
+                return groups;
+
+            const tileGroup = tileGroupStableIds
+                .map(id => stableWindowMap.get(id))
+                .filter(w => w?.tiledRect && w?.untiledRect)
+                .map(w => w.get_id());
+            if (!tileGroup.length)
+                return groups;
+
+            groups.set(window.get_id(), tileGroup);
+            return groups;
+        }, new Map())
         : new Map();
     this._twm.setTileGroups(tileGroups);
     openWindows.forEach(w => {
-        if (tileGroups.has(w.get_id())) {
-            const group = this._twm.getTileGroupFor(w);
-            this._twm.updateTileGroup(group);
-        }
+        if (tileGroups.has(w.get_id()))
+            this._twm.updateTileGroup(this._twm.getTileGroupFor(w));
     });
 
     try { file.delete(null); } catch (e) {}

@@ -297,6 +297,9 @@ var TilingSwitcherPopup = GObject.registerClass({
 
         this.tiledWindow = window;
 
+        // Clear stale tiling props before workspace/monitor changes so the old
+        // workspace-changed and tile-group state can't react during the move.
+        Twm.clearTilingProps(window.get_id());
         window.change_workspace(global.workspace_manager.get_active_workspace());
         window.move_to_monitor(this._monitor);
 
@@ -304,9 +307,8 @@ var TilingSwitcherPopup = GObject.registerClass({
         // Tiling Popup. Calling activate/focus() after tile() doesn't seem to
         // work for GNOME Terminal if it is maximized before trying to tile it.
         // It won't be tiled properly in that case for some reason... Instead
-        // activate first but clear the tiling signals before so that the old
-        // tile group won't be accidently raised.
-        Twm.clearTilingProps(window.get_id());
+        // activate first so GNOME Terminal and similar windows still tile
+        // correctly after being focused.
         window.activate(global.get_current_time());
         Twm.tile(window, rect, { openTilingPopup: this._allowConsecutivePopup });
     }

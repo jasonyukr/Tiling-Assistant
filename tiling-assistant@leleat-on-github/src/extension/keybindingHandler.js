@@ -449,46 +449,24 @@ var Handler = class TilingKeybindingHandler {
         }
 
         const wRect = window.tiledRect;
-        const isLeftHalf =
-            wRect.x === workArea.x &&
-            wRect.y === workArea.y &&
-            wRect.width !== workArea.width &&
-            wRect.height === workArea.height;
-        const isRightHalf =
-            wRect.x !== workArea.x &&
-            wRect.y === workArea.y &&
-            wRect.x2 === workArea.x2 &&
-            wRect.height === workArea.height;
-        const isTopHalf =
-            wRect.x === workArea.x &&
-            wRect.y === workArea.y &&
-            wRect.width === workArea.width &&
-            wRect.height !== workArea.height;
-        const isBottomHalf =
-            wRect.x === workArea.x &&
-            wRect.y !== workArea.y &&
-            wRect.width === workArea.width &&
-            wRect.y2 === workArea.y2;
-        const isTopLeftQuarter =
-            wRect.x === workArea.x &&
-            wRect.y === workArea.y &&
-            wRect.width !== workArea.width &&
-            wRect.height !== workArea.height;
-        const isTopRightQuarter =
-            wRect.x !== workArea.x &&
-            wRect.y === workArea.y &&
-            wRect.x2 === workArea.x2 &&
-            wRect.height !== workArea.height;
-        const isBottomLeftQuarter =
-            wRect.x === workArea.x &&
-            wRect.y !== workArea.y &&
-            wRect.width !== workArea.width &&
-            wRect.y2 === workArea.y2;
-        const isBottomRightQuarter =
-            wRect.x !== workArea.x &&
-            wRect.y !== workArea.y &&
-            wRect.x2 === workArea.x2 &&
-            wRect.y2 === workArea.y2;
+        const monitor = window.get_monitor();
+        const rectMatches = shortcut => {
+            const rect = Twm.getTileFor(shortcut, workArea, monitor);
+            return Util.equal(wRect.x, rect.x) &&
+                Util.equal(wRect.y, rect.y) &&
+                Util.equal(wRect.width, rect.width) &&
+                Util.equal(wRect.height, rect.height) &&
+                Util.equal(wRect.x2, rect.x2) &&
+                Util.equal(wRect.y2, rect.y2);
+        };
+        const isLeftHalf = rectMatches(Shortcuts.LEFT);
+        const isRightHalf = rectMatches(Shortcuts.RIGHT);
+        const isTopHalf = rectMatches(Shortcuts.TOP);
+        const isBottomHalf = rectMatches(Shortcuts.BOTTOM);
+        const isTopLeftQuarter = rectMatches(Shortcuts.TOP_LEFT);
+        const isTopRightQuarter = rectMatches(Shortcuts.TOP_RIGHT);
+        const isBottomLeftQuarter = rectMatches(Shortcuts.BOTTOM_LEFT);
+        const isBottomRightQuarter = rectMatches(Shortcuts.BOTTOM_RIGHT);
 
         let rect;
         if (isLeftHalf) {
