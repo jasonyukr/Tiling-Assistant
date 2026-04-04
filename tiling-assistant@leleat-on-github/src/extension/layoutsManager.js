@@ -185,7 +185,11 @@ var LayoutManager = class TilingLayoutsManager {
 
         if (app.can_open_new_window()) {
             Twm.openAppTiled(app, this._currRect, false, window => {
-                window && this._tiledWithLayout.push(window);
+                if (window) {
+                    this._tiledWithLayout.push(window);
+                    const i = this._remainingWindows.indexOf(window);
+                    i !== -1 && this._remainingWindows.splice(i, 1);
+                }
                 this._step();
             });
         } else {
