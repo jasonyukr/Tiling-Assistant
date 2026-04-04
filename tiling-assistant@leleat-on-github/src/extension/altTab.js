@@ -264,21 +264,10 @@ var AppSwitcherItem = GObject.registerClass({
     }
 
     // Remove an AppIcon to the corresponding app.
-    // This doesn't update cached window list!
     removeApp(app) {
-        for (let i = this.appIcons.length - 1; i >= 0; i--) {
-            const appIcon = this.appIcons[i];
-            if (appIcon.app !== app)
-                continue;
-
-            this.appIcons.splice(i, 1);
-            appIcon.destroy();
-            const chain = this.chainIcons.splice(Math.max(0, i - 1), 1)[0];
-            chain?.destroy();
-        }
-
-        if (!this.appIcons.length)
-            this.emit('all-icons-removed');
+        const winTracker = Shell.WindowTracker.get_default();
+        this.cachedWindows = this.cachedWindows.filter(w => winTracker.get_window_app(w) !== app);
+        this.updateAppIcons();
     }
 });
 

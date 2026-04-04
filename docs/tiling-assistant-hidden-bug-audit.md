@@ -274,6 +274,25 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - mix delete, restore, popup replace, and move/resize commands quickly
   - verify selection/focus always tracks the right live window
 
+### [x] P3. App switcher tile-group items can keep closed windows cached
+
+- **Status:** Fixed. Tile-group items in the custom app switcher now drop closed-app windows from `cachedWindows` and rebuild their icon/label state when an app stops, so activating the item no longer targets stale windows.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/altTab.js`
+- **Path:** `AppSwitcherItem.removeApp()`
+- **Why risky:**
+  - app-stop updates previously removed only the visible icon
+  - `cachedWindows` stayed unchanged
+  - tile-group activation still uses `cachedWindows[0]`
+- **Likely user trouble:**
+  - app switcher tile-group entry can try to activate a window that was already closed
+  - label/icon state can drift after one app in a tile group exits
+- **Suggested repro:**
+  - enable tile groups in the app switcher
+  - create a tile group with windows from different apps
+  - close one app while the other remains open
+  - verify the remaining app-switcher item still activates the live window correctly
+
 ---
 
 ## Lower-confidence behavior smells
