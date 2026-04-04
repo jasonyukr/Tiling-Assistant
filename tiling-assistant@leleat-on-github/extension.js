@@ -191,7 +191,7 @@ function _saveBeforeSessionLock() {
 
     // can't just check for isTiled because maximized windows may
     // have an untiledRect as well in case window gaps are used
-    const openWindows = this._twm.getWindows(false);
+    const openWindows = this._twm.getWindows(true);
     const savedWindows = openWindows.filter(w => w.untiledRect).map(w => {
         return {
             windowId: w.get_stable_sequence(),
@@ -266,7 +266,7 @@ function _loadAfterSessionLock() {
         return;
     }
 
-    const openWindows = this._twm.getWindows(false);
+    const openWindows = this._twm.getWindows(true);
     const stableWindowMap = new Map(openWindows.map(w => [w.get_stable_sequence(), w]));
 
     const jsToRect = jsRect => {
