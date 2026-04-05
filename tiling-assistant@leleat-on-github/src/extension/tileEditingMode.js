@@ -376,6 +376,9 @@ const DefaultKeyHandler = class DefaultKeyHandler {
             }
 
             tilingPopup.connect('closed', (popup, canceled) => {
+                if (!this._tileEditor._keyHandler)
+                    return;
+
                 if (canceled)
                     return;
 

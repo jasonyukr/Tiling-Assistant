@@ -421,6 +421,40 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - remove the currently selected item or an item before it
   - verify the highlight and follow-up actions stay on a valid remaining item
 
+### [x] F8. Session-lock restore could drop untiled geometry for maximized windows
+
+- **Status:** Fixed. `_loadAfterSessionLock()` now restores `window.untiledRect` independently from `canRestoreTiledState`, so extension-maximized restore geometry survives unlock even when the tiled rect itself is not reapplied.
+
+- **File:** `tiling-assistant@leleat-on-github/extension.js`
+- **Path:** `_loadAfterSessionLock()`
+- **Why risky:**
+  - the session-lock restore path previously tied `untiledRect` restoration to the same condition that controls tiled-state restoration
+  - extension-maximized windows can still need their untiled geometry even when the tiled rect is not safe to restore verbatim
+- **Likely user trouble:**
+  - unlock can leave a maximized or restored window with the wrong untiled geometry
+  - later untile or resize operations can use stale restore bounds
+- **Suggested repro:**
+  - tile a window in a state that leaves `untiledRect` saved across lock
+  - lock and unlock the session
+  - verify the window still restores or untile-resizes with the original untiled geometry
+
+### [x] F9. Tile editing popup close callback could run after teardown
+
+- **Status:** Fixed. The `Space` key path now guards the `TilingSwitcherPopup` `'closed'` callback so it no-ops after Tile Editing Mode has already been closed and torn down.
+
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
+- **Path:** `handleKeyPress()` `Space` path, `TilingSwitcherPopup` `'closed'` callback
+- **Why risky:**
+  - the popup callback could still fire after the mode had already removed its key handler and torn down editor state
+  - late callback work could then touch stale tile-editing state
+- **Likely user trouble:**
+  - closing Tile Editing Mode while the popup is still in flight can trigger late state mutation or a crash
+  - popup close handling can misfire after the mode has already exited
+- **Suggested repro:**
+  - enter Tile Editing Mode and press `Space` to open the tiling popup
+  - close or tear down Tile Editing Mode before the popup closes
+  - verify the popup close callback does nothing after teardown
+
 ## Lower-confidence behavior smells
 
 These may be intentional, but they are worth reviewing because users may report them as bugs:
