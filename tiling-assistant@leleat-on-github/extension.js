@@ -305,7 +305,7 @@ function _loadAfterSessionLock() {
 
         window.isTiled = !!isTiled && canRestoreTiledState;
         window.tiledRect = canRestoreTiledState ? normalizedTiledRect : null;
-        window.untiledRect = canRestoreTiledState ? restoredUntiledRect : null;
+        window.untiledRect = restoredUntiledRect;
         if (window.isTiled) {
             window._tilingWorkspace = window.get_workspace();
             window._tilingWorkspaceIndex = window._tilingWorkspace?.index();
