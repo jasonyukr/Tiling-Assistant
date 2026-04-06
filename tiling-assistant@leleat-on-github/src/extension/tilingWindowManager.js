@@ -1343,7 +1343,10 @@ var TilingWindowManager = class TilingWindowManager {
             return;
         }
 
-        if (this._ignoreWsChange)
+        const workspace = window.get_workspace();
+        if (this._ignoreWsChange && workspace &&
+            (window._tilingWorkspace === workspace ||
+            window._tilingWorkspaceIndex === workspace.index()))
             return;
 
         if (this.isMaximized(window)) {
@@ -1354,7 +1357,6 @@ var TilingWindowManager = class TilingWindowManager {
 
             this.tile(window, workArea, { openTilingPopup: false, skipAnim: true });
         } else if (window.isTiled) {
-            const workspace = window.get_workspace();
             if (workspace && (window._tilingWorkspace === workspace ||
                 window._tilingWorkspaceIndex === workspace.index()))
                 return;
