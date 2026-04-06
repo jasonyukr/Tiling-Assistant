@@ -172,6 +172,7 @@ var Shortcuts = class Shortcuts {
     static CENTER_WINDOW = 'center-window';
     static CENTER_WINDOW_COLUMN = 'center-window-column';
     static CENTER_WINDOW_COMPACT = 'center-compact-window';
+    static CENTER_WINDOW_TINY = 'center-tiny-window';
     static TOP = 'tile-top-half';
     static BOTTOM = 'tile-bottom-half';
     static LEFT = 'tile-left-half';
