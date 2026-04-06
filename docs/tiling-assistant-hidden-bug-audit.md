@@ -533,6 +533,70 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - use Up/Down and Enter
   - confirm only visible layouts can be selected and activated
 
+### [x] F15. Favorite-layout previews could keep a stale monitor after cross-monitor entry
+
+- **Status:** Fixed. Monitor-enter now retargets favorite-layout preview rebuilds to the destination monitor, so the preview state is rebuilt against the monitor the drag actually entered.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/moveHandler.js`
+- **Path:** `_onMonitorEntered()`, `_onMoving()`, `_preparePreviewModeChange()`, `_favoriteLayoutTilingPreview()`
+- **Why risky:**
+  - monitor-enter ignored its `monitorNr` and reused the last monitor snapshot for favorite-layout previews
+  - the rebuild path and drag preview both read from stale monitor state during a cross-monitor drag
+- **Likely user trouble:**
+  - favorite-layout previews and tile targets can desync across monitors
+  - wrong final placement is possible if the preview and target rect drift apart
+- **Suggested repro:**
+  - start a favorite-layout drag on one monitor
+  - cross into another monitor while holding the drag
+  - confirm the preview retargets to the entered monitor and stays aligned with the intended rects
+
+### [x] F16. Dynamic-workspace churn can suppress real workspace-change handling
+
+- **Status:** Follow-up. The `_ignoreWsChange` guard now only suppresses no-op churn when the window is still on its stored tiling workspace; real workspace mismatches are allowed through for tiled or maximized-with-gaps windows.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingWindowManager.js`
+- **Path:** `_onWorkspaceAdded()`, `_onWorkspaceRemoved()`, `_onWindowWorkspaceChanged()`
+- **Why risky:**
+  - `_onWorkspaceAdded()` and `_onWorkspaceRemoved()` set a global 50ms `_ignoreWsChange` timer
+  - dynamic-workspace timing can suppress real workspace-change handling for tiled or maximized-with-gaps windows
+- **Likely user trouble:**
+  - a window can miss the untile / re-tile reaction it should have gotten on a real workspace move
+  - the window may stay in the wrong tiled or maximized-with-gaps state until another event arrives
+- **Suggested repro:**
+  - tile a window or maximize it with gaps
+  - trigger workspace churn around the same time as a real workspace move
+  - confirm only no-op churn is ignored and actual workspace changes still update the window state
+
+### [x] F17. ResizeKeyHandler._resize() can clamp against the wrong monitor work area
+
+- **Status:** Follow-up. The resize clamp should be anchored to the tile editor's monitor-scoped work area; using the window's current monitor can skew edge limits when those monitors differ.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
+- **Path:** `ResizeKeyHandler._resize()`
+- **Why risky:**
+  - the resize clamp basis can drift from the tile editor's monitor context
+  - edge limits may be computed against a different monitor than the one being edited
+- **Likely user trouble:**
+  - resize steps can stop too early or too late near monitor boundaries
+  - the highlighted tile can feel inconsistent when editing windows on a different monitor basis
+- **Suggested repro:**
+  - start tile editing on one monitor
+  - resize a tile while the window's current monitor context differs from the editor monitor
+  - confirm the clamp uses the editor monitor's work area for its limit checks
+
+### [x] F18. `_dynamicTilingState()` may mix monitor bases between work-area lookup and tile matching
+
+- **Status:** Follow-up. The work-area source should stay aligned with the monitor basis used later in the function; mixing current-monitor and explicit-monitor lookups can make state matching drift on cross-monitor setups.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/keybindingHandler.js`
+- **Path:** `_dynamicTilingState()`
+- **Why risky:**
+  - the work-area rect can be built from a different monitor basis than the later `window.get_monitor()`-anchored tile comparison
+  - that mismatch can make tiling-state detection conservative or inaccurate when the active window and current monitor diverge
+- **Likely user trouble:**
+  - dynamic hotkeys may pick the wrong follow-up tile or fail to recognize the current tile state
+  - cross-monitor tiling transitions can feel inconsistent
+- **Suggested repro:**
+  - tile a window on one monitor, then move focus or monitor context so the current-monitor basis differs
+  - trigger a dynamic tiling shortcut
+  - confirm the state check and tile lookup use the same monitor basis throughout the function
+
 ## Lower-confidence behavior smells
 
 These may be intentional, but they are worth reviewing because users may report them as bugs:
