@@ -95,6 +95,9 @@
 		<key name="center-compact-window" type="as">
 			<default>[]</default>
 		</key>
+		<key name="center-small-window" type="as">
+			<default>[]</default>
+		</key>
 		<key name="center-tiny-window" type="as">
 			<default>[]</default>
 		</key>

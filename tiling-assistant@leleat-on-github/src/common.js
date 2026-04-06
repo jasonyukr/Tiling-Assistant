@@ -172,6 +172,7 @@ var Shortcuts = class Shortcuts {
     static CENTER_WINDOW = 'center-window';
     static CENTER_WINDOW_COLUMN = 'center-window-column';
     static CENTER_WINDOW_COMPACT = 'center-compact-window';
+    static CENTER_WINDOW_SMALL = 'center-small-window';
     static CENTER_WINDOW_TINY = 'center-tiny-window';
     static TOP = 'tile-top-half';
     static BOTTOM = 'tile-bottom-half';
@@ -202,6 +203,7 @@ var Shortcuts = class Shortcuts {
             this.CENTER_WINDOW,
             this.CENTER_WINDOW_COLUMN,
             this.CENTER_WINDOW_COMPACT,
+            this.CENTER_WINDOW_SMALL,
             this.CENTER_WINDOW_TINY,
             this.TOP,
             this.BOTTOM,

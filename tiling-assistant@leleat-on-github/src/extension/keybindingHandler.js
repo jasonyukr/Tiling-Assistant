@@ -291,6 +291,42 @@ var Handler = class TilingKeybindingHandler {
                 window.move_resize_frame(false, x, y, width, height);
             }
 
+        // Center window to Center Small (derived from Center Compact)
+        } else if (shortcutName === Shortcuts.CENTER_WINDOW_SMALL) {
+            const workArea = new Rect(window.get_work_area_current_monitor());
+            const compactWidthRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_WIDTH))) / 100;
+            const compactHeightRatio = Math.max(10, Math.min(100, Settings.getInt(Settings.CENTER_COMPACT_HEIGHT))) / 100;
+            const compactWidth = Math.floor(workArea.width * compactWidthRatio);
+            const compactHeight = Math.floor(workArea.height * compactHeightRatio);
+            const width = Math.floor(compactWidth * 0.75);
+            const height = Math.floor(compactHeight * 0.75);
+            const x = workArea.center.x - Math.floor(width / 2);
+            const y = workArea.center.y - Math.floor(height / 2);
+
+            if (window.isTiled) {
+                const currRect = window.tiledRect;
+                const tileRect = new Rect(x, y, width, height);
+                if (!tileRect.equal(currRect))
+                    Twm.tile(window, tileRect, { openTilingPopup: false });
+            } else if (!Twm.isMaximized(window)) {
+                if (!window.allows_move() || !window.allows_resize())
+                    return;
+
+                const currRect = window.get_frame_rect();
+                if (x === currRect.x && y === currRect.y &&
+                    width === currRect.width && height === currRect.height)
+                    return;
+
+                const wActor = window.get_compositor_private();
+                wActor && Main.wm._prepareAnimationInfo(
+                    global.window_manager,
+                    wActor,
+                    currRect,
+                    Meta.SizeChange.UNMAXIMIZE
+                );
+                window.move_resize_frame(false, x, y, width, height);
+            }
+
         // Center window to Center Tiny (derived from Center Compact)
         } else if (shortcutName === Shortcuts.CENTER_WINDOW_TINY) {
             const workArea = new Rect(window.get_work_area_current_monitor());

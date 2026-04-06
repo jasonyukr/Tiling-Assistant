@@ -63,6 +63,7 @@ const PrefsWidget = GObject.registerClass({
         'center_window',
         'center_window_column',
         'center_compact_window',
+        'center_small_window',
         'center_tiny_window',
         'center_column_width',
         'center_compact_width',
