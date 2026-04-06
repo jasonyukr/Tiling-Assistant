@@ -641,7 +641,8 @@ const ResizeKeyHandler = class ResizeKeyHandler extends DefaultKeyHandler {
         // Rect, which is being resized by the user. But it still has
         // its original / pre-resize dimensions
         const resizedRect = window.tiledRect;
-        const workArea = new Rect(window.get_work_area_current_monitor());
+        const activeWs = global.workspace_manager.get_active_workspace();
+        const workArea = new Rect(activeWs.get_work_area_for_monitor(this._tileEditor.monitor));
         let resizeAmount = 50;
 
         // Limit resizeAmount to the workArea
