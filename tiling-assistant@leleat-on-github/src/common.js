@@ -202,6 +202,7 @@ var Shortcuts = class Shortcuts {
             this.CENTER_WINDOW,
             this.CENTER_WINDOW_COLUMN,
             this.CENTER_WINDOW_COMPACT,
+            this.CENTER_WINDOW_TINY,
             this.TOP,
             this.BOTTOM,
             this.LEFT,
