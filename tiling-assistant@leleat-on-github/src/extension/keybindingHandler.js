@@ -482,7 +482,7 @@ var Handler = class TilingKeybindingHandler {
      *      activated.
      */
     _dynamicTilingState(window, shortcutName, isWindowsStyle) {
-        const workArea = new Rect(window.get_work_area_current_monitor());
+        const workArea = new Rect(window.get_work_area_for_monitor(window.get_monitor()));
 
         if (Twm.isMaximized(window)) {
             switch (shortcutName) {
