@@ -108,8 +108,14 @@ class TileEditingMode extends St.Widget {
 
         // this._selectIndicator may be undefined, if Tile Editing Mode is
         // left as soon as it's entered (e. g. when there's no tile group).
-        this._selectIndicator?.window?.activate(global.get_current_time());
-        this._selectIndicator?.ease({
+        const selectIndicator = this._selectIndicator;
+        if (!selectIndicator) {
+            this.destroy();
+            return;
+        }
+
+        selectIndicator.window?.activate(global.get_current_time());
+        selectIndicator.ease({
             x: this._selectIndicator.x + SCALE_SIZE / 2,
             y: this._selectIndicator.y + SCALE_SIZE / 2,
             width: this._selectIndicator.width - SCALE_SIZE,
@@ -118,7 +124,7 @@ class TileEditingMode extends St.Widget {
             duration: 150,
             mode: Clutter.AnimationMode.EASE_OUT_QUAD,
             onComplete: () => this.destroy()
-        }) ?? this.destroy();
+        });
     }
 
     vfunc_button_press_event() {
@@ -363,6 +369,7 @@ const DefaultKeyHandler = class DefaultKeyHandler {
             const allWs = Settings.getBoolean(Settings.POPUP_ALL_WORKSPACES);
             const openWindows = Twm.getWindows(allWs).filter(w => !this._windows.includes(w));
             const { TilingSwitcherPopup } = Me.imports.src.extension.tilingPopup;
+            const selectedWindow = this._selectIndicator.window;
             const replacedRect = this._selectIndicator.rect.copy();
             const tilingPopup = new TilingSwitcherPopup(
                 openWindows,
@@ -384,8 +391,13 @@ const DefaultKeyHandler = class DefaultKeyHandler {
 
                 const { tiledWindow } = popup;
                 this._tileEditor._syncWindows();
-                const replaced = this._windows.findIndex(w => w.tiledRect?.equal(replacedRect));
-                replaced !== -1 && this._windows.splice(replaced, 1);
+                if (selectedWindow) {
+                    const replaced = this._windows.indexOf(selectedWindow);
+                    replaced !== -1 && this._windows.splice(replaced, 1);
+                } else {
+                    const replaced = this._windows.findIndex(w => w.tiledRect?.equal(replacedRect));
+                    replaced !== -1 && this._windows.splice(replaced, 1);
+                }
                 this._windows = this._windows.filter(w => w !== tiledWindow);
 
                 // Create the new tile group to allow 1 window to be part of multiple tile groups

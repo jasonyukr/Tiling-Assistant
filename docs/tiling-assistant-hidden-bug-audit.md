@@ -567,7 +567,7 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
 
 ### [x] F17. ResizeKeyHandler._resize() can clamp against the wrong monitor work area
 
-- **Status:** Follow-up. The resize clamp should be anchored to the tile editor's monitor-scoped work area; using the window's current monitor can skew edge limits when those monitors differ.
+- **Status:** Fixed. The current implementation already clamps against the tile editor's monitor-scoped work area, so this follow-up is stale.
 - **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
 - **Path:** `ResizeKeyHandler._resize()`
 - **Why risky:**
@@ -583,7 +583,7 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
 
 ### [x] F18. `_dynamicTilingState()` may mix monitor bases between work-area lookup and tile matching
 
-- **Status:** Follow-up. The work-area source should stay aligned with the monitor basis used later in the function; mixing current-monitor and explicit-monitor lookups can make state matching drift on cross-monitor setups.
+- **Status:** Fixed. The current implementation already uses `window.get_monitor()` consistently for both the work-area lookup and tile matching, so this follow-up is stale.
 - **File:** `tiling-assistant@leleat-on-github/src/extension/keybindingHandler.js`
 - **Path:** `_dynamicTilingState()`
 - **Why risky:**
@@ -596,6 +596,39 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - tile a window on one monitor, then move focus or monitor context so the current-monitor basis differs
   - trigger a dynamic tiling shortcut
   - confirm the state check and tile lookup use the same monitor basis throughout the function
+
+## Follow-up findings from fourth audit
+
+### [x] F19. Tile Editing Mode close can destroy immediately before fade-out completes
+
+- **Status:** Fixed. `TileEditor.close()` now destroys immediately only when there is no selection indicator; otherwise teardown waits for the fade-out `onComplete`.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
+- **Path:** `TileEditor.close()`
+- **Why risky:**
+  - the close path previously chained `ease()` with `?? this.destroy()`
+  - if `ease()` returned a nullish value, the editor could be destroyed before the fade-out completed
+- **Likely user trouble:**
+  - tile-editing teardown can cut off the exit animation
+  - close timing can race with the indicator fade-out
+- **Suggested repro:**
+  - enter Tile Editing Mode
+  - close it with a selection indicator present
+  - verify the editor now waits for the fade-out completion before destroying itself
+
+### [x] F20. Tile Editing Mode popup replacement could keep stale members after geometry drift
+
+- **Status:** Fixed. The popup replacement callback now removes the originally selected window by identity first, and only falls back to rect matching when there was no live selected window.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tileEditingMode.js`
+- **Path:** `DefaultKeyHandler.handleKeyPress()` `Space` path
+- **Why risky:**
+  - the replacement callback previously removed the old member with exact rect equality
+  - small geometry drift could leave the replaced window in `_windows` and corrupt the rebuilt tile group
+- **Likely user trouble:**
+  - the old window can stay in the Tile Editing Mode set after a popup replacement
+  - later selection, focus, or group rebuilds can act on the wrong membership
+- **Suggested repro:**
+  - enter Tile Editing Mode, press `Space`, and replace the selected tile with a popup choice
+  - verify the original selected window is removed by identity and the rebuilt group contains only the live members
 
 ## Lower-confidence behavior smells
 
