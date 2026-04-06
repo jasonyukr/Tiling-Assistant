@@ -156,16 +156,16 @@ var TilingWindowManager = class TilingWindowManager {
      */
     static tile(window, newRect, { openTilingPopup = true, skipAnim = false, fakeTile = false } = {}) {
         if (!window || window.is_skip_taskbar())
-            return;
+            return false;
 
         const wasMaximized = window.get_maximized();
+        const canTile = (window.allows_resize() && window.allows_move()) || wasMaximized;
+        if (!canTile)
+            return false;
+
         if (wasMaximized)
             window.unmaximize(wasMaximized);
-
         window.unmake_fullscreen();
-
-        if (!window.allows_resize() || !window.allows_move())
-            return;
 
         // Remove window from the other windows' tileGroups so it
         // doesn't falsely get raised with them.
@@ -191,7 +191,7 @@ var TilingWindowManager = class TilingWindowManager {
         if (maximize && !maxUsesGap) {
             window.tiledRect = null;
             window.maximize(Meta.MaximizeFlags.BOTH);
-            return;
+            return true;
         }
 
         // Save the intended tiledRect for accurate operations later.
@@ -237,6 +237,8 @@ var TilingWindowManager = class TilingWindowManager {
 
             openTilingPopup && this.tryOpeningTilingPopup();
         }
+
+        return true;
     }
 
     /**
@@ -1051,14 +1053,16 @@ var TilingWindowManager = class TilingWindowManager {
                     // Claim the window so overlapping launch requests don't tile it twice.
                     this._openAppTiledClaimedWindowIds.add(windowId);
                     request.claimedWindowId = windowId;
-                    try {
-                        this.tile(window, request.rect, {
-                            openTilingPopup: request.openTilingPopup,
-                            skipAnim: true
-                        });
-                    } finally {
-                        request.clear(window);
-                    }
+                    const tiled = this.tile(window, request.rect, {
+                        openTilingPopup: request.openTilingPopup,
+                        skipAnim: true
+                    });
+                    const succeeded = tiled && (
+                        window.isTiled
+                            ? window.tiledRect?.equal(request.rect)
+                            : this.isMaximized(window, request.rect)
+                    );
+                    request.clear(succeeded ? window : null);
                 }
             }) ?? 0;
             request.firstFrames.set(windowId, { actor: wActor, id: firstFrameId });

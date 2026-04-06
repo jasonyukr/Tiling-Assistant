@@ -187,6 +187,8 @@ var TilingSwitcherPopup = GObject.registerClass({
             const hPadd = leftPadd + rightPadd;
 
             const icon = this._items[this._selectedIndex];
+            if (!icon)
+                return;
             const [posX] = icon.get_transformed_position();
             const thumbnailCenter = posX + icon.width / 2;
             const [, cNatWidth] = this._thumbnails.get_preferred_width(-1);
@@ -283,6 +285,11 @@ var TilingSwitcherPopup = GObject.registerClass({
             return;
         }
 
+        const oldWorkspace = window.get_workspace();
+        const oldMonitor = window.get_monitor();
+        const oldRect = new Rect(window.get_frame_rect());
+        const wasMaximized = Twm.isMaximized(window);
+        const oldTiledRect = window.tiledRect?.copy();
         let rect = this._freeScreenRect;
 
         // Halve the tile rect.
@@ -315,12 +322,30 @@ var TilingSwitcherPopup = GObject.registerClass({
         // activate first so GNOME Terminal and similar windows still tile
         // correctly after being focused.
         window.activate(global.get_current_time());
-        Twm.tile(window, rect, { openTilingPopup: this._allowConsecutivePopup });
+        const tiled = Twm.tile(window, rect, { openTilingPopup: this._allowConsecutivePopup });
         this.tiledWindow = rect.equal(window.get_work_area_current_monitor())
             ? (Twm.isMaximized(window, rect) ? window : null)
             : window.tiledRect?.equal(rect)
                 ? window
                 : null;
+
+        if (tiled && this.tiledWindow)
+            return;
+
+        if (window.get_monitor() !== oldMonitor)
+            window.move_to_monitor(oldMonitor);
+        if (window.get_workspace() !== oldWorkspace)
+            window.change_workspace(oldWorkspace);
+
+        if (wasMaximized && oldTiledRect) {
+            Twm.tile(window, oldTiledRect, { openTilingPopup: false, skipAnim: true });
+        } else if (wasMaximized) {
+            window.maximize(Meta.MaximizeFlags.BOTH);
+        } else if (oldTiledRect) {
+            Twm.tile(window, oldTiledRect, { openTilingPopup: false, skipAnim: true });
+        } else if (!oldRect.equal(window.get_frame_rect())) {
+            window.move_resize_frame(false, oldRect.x, oldRect.y, oldRect.width, oldRect.height);
+        }
     }
 
     // Dont _finish(), if no mods are pressed

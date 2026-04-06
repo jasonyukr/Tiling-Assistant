@@ -473,11 +473,23 @@ const LayoutSearch = GObject.registerClass({
     }
 
     _focusPrev() {
-        this._focus((this._focused + this._items.length - 1) % this._items.length);
+        const visibleItems = this._items.filter(item => item.visible);
+        if (!visibleItems.length)
+            return;
+
+        const currVisibleIdx = visibleItems.findIndex(item => this._items[this._focused] === item);
+        const baseIdx = currVisibleIdx === -1 ? 0 : currVisibleIdx;
+        this._focus(this._items.indexOf(visibleItems[(baseIdx + visibleItems.length - 1) % visibleItems.length]));
     }
 
     _focusNext() {
-        this._focus((this._focused + 1) % this._items.length);
+        const visibleItems = this._items.filter(item => item.visible);
+        if (!visibleItems.length)
+            return;
+
+        const currVisibleIdx = visibleItems.findIndex(item => this._items[this._focused] === item);
+        const baseIdx = currVisibleIdx === -1 ? -1 : currVisibleIdx;
+        this._focus(this._items.indexOf(visibleItems[(baseIdx + 1) % visibleItems.length]));
     }
 
     _focus(newIdx) {
@@ -490,7 +502,11 @@ const LayoutSearch = GObject.registerClass({
     }
 
     _activate() {
-        this._focused !== -1 && this.emit('item-activated', this._focused);
+        const item = this._items[this._focused];
+        if (!item?.visible)
+            return;
+
+        this.emit('item-activated', this._focused);
         this.destroy();
     }
 });
