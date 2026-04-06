@@ -455,6 +455,84 @@ Static audit only. This is not proof that no other bugs exist. It is a ranked li
   - close or tear down Tile Editing Mode before the popup closes
   - verify the popup close callback does nothing after teardown
 
+## Follow-up findings from third audit
+
+### [x] F10. Popup tiling failure can leave the window displaced
+
+- **Status:** Fixed. `_tileWindow()` now restores the original workspace, monitor, and pre-popup placement when the requested tile does not stick.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingPopup.js`
+- **Path:** `_tileWindow()`
+- **Why risky:**
+  - the popup moves the window across workspace and monitor before calling `Twm.tile()`
+  - a failed tile could leave the window sitting on the popup target monitor/workspace
+- **Likely user trouble:**
+  - popup-driven tiling can fail but still relocate the window
+  - later layout steps may continue from the wrong screen position
+- **Suggested repro:**
+  - trigger popup tiling for a window that cannot be tiled cleanly
+  - confirm the window returns to its original placement if tiling fails
+
+### [x] F11. `tile()` could drop maximize/fullscreen state before confirming tiling was possible
+
+- **Status:** Fixed. `tile()` now checks move/resize capability before unmaximizing or leaving fullscreen.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingWindowManager.js`
+- **Path:** `tile()`
+- **Why risky:**
+  - the function unmaximized and un-fullscreened first
+  - then it checked whether tiling was actually possible
+- **Likely user trouble:**
+  - a failed tile attempt could de-maximize a window without tiling it
+  - fullscreen windows could lose their state on a no-op tile attempt
+- **Suggested repro:**
+  - call a tiling action on a window that cannot be resized or moved
+  - confirm it keeps its original state when tiling is rejected
+
+### [x] F12. `openAppTiled()` could report success before the tile actually stuck
+
+- **Status:** Fixed. The app-launch flow now verifies the post-tile state before clearing the request as successful.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingWindowManager.js`
+- **Path:** `openAppTiled()`
+- **Why risky:**
+  - the first-frame handler cleared the launch request immediately after calling `tile()`
+  - it did not check whether the window actually reached the requested rect/state
+- **Likely user trouble:**
+  - layout sequencing can advance as if the launch succeeded when it did not
+  - later layout items can consume the wrong remaining-window state
+- **Suggested repro:**
+  - activate a layout that launches an app into a tile rect
+  - force a launch path where tiling does not stick and confirm it no longer reports success
+
+### [x] F13. Tiling popup thumbnail allocation could dereference a stale selection
+
+- **Status:** Fixed. Thumbnail allocation now skips work when the selected item is no longer valid.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/tilingPopup.js`
+- **Path:** `vfunc_allocate()`
+- **Why risky:**
+  - the allocation code assumed `_items[_selectedIndex]` always existed
+  - item churn can invalidate that selection while thumbnails are visible
+- **Likely user trouble:**
+  - popup layout can crash or stop allocating after a window is removed mid-interaction
+- **Suggested repro:**
+  - open the tiling popup with thumbnails visible
+  - remove a candidate window while the popup is open
+  - verify allocation no longer crashes on the stale selection
+
+### [x] F14. Layout search could activate hidden filtered items
+
+- **Status:** Fixed. Search navigation now only moves across visible items and hidden selections are ignored on activation.
+- **File:** `tiling-assistant@leleat-on-github/src/extension/layoutsManager.js`
+- **Path:** `LayoutSearch._focusPrev()`, `_focusNext()`, `_activate()`
+- **Why risky:**
+  - filtering hid items, but keyboard navigation still cycled over every item
+  - Enter could emit a hidden layout index
+- **Likely user trouble:**
+  - searching a layout could jump to an item that is no longer visible
+  - pressing Enter could launch the wrong layout after filtering
+- **Suggested repro:**
+  - type a filter that hides most layouts
+  - use Up/Down and Enter
+  - confirm only visible layouts can be selected and activated
+
 ## Lower-confidence behavior smells
 
 These may be intentional, but they are worth reviewing because users may report them as bugs:
