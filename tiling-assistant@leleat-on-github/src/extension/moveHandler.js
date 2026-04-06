@@ -96,10 +96,12 @@ var Handler = class TilingMoveHandler {
     }
 
     _onMonitorEntered(src, monitorNr, window) {
-        if (this._isGrabOp)
+        if (this._isGrabOp && this._currPreviewMode === MoveModes.FAVORITE_LAYOUT) {
+            this._monitorNr = monitorNr;
             // Reset preview mode:
             // Currently only needed to grab the favorite layout for the new monitor.
-            this._preparePreviewModeChange(this._currPreviewMode, window);
+            this._preparePreviewModeChange(this._currPreviewMode, window, monitorNr);
+        }
     }
 
     _onMoveStarted(window, grabOp) {
@@ -320,8 +322,12 @@ var Handler = class TilingMoveHandler {
             newMode = MoveModes.EDGE_TILING;
         }
 
-        if (this._currPreviewMode !== newMode)
-            this._preparePreviewModeChange(newMode, window);
+        if (this._currPreviewMode !== newMode) {
+            const monitorNr = newMode === MoveModes.FAVORITE_LAYOUT
+                ? global.display.get_current_monitor()
+                : this._monitorNr;
+            this._preparePreviewModeChange(newMode, window, monitorNr);
+        }
 
         switch (newMode) {
             case MoveModes.EDGE_TILING:
@@ -337,7 +343,7 @@ var Handler = class TilingMoveHandler {
         this._currPreviewMode = newMode;
     }
 
-    _preparePreviewModeChange(newMode, window) {
+    _preparePreviewModeChange(newMode, window, monitorNr = this._monitorNr) {
         // Cleanups / resets
         this._tileRect = null;
         this._splitRects.clear();
@@ -354,10 +360,10 @@ var Handler = class TilingMoveHandler {
 
         switch (newMode) {
             case MoveModes.FAVORITE_LAYOUT:
-                this._favoriteLayout = Util.getFavoriteLayout();
+                this._favoriteLayout = Util.getFavoriteLayout(monitorNr);
                 this._favoriteLayout.forEach(rect => {
                     const tilePreview = new TilePreview();
-                    tilePreview.open(window, rect, this._monitorNr, {
+                    tilePreview.open(window, rect, monitorNr, {
                         opacity: 255,
                         duration: 150
                     });
