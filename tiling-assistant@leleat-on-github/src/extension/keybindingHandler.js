@@ -361,6 +361,15 @@ var Handler = class TilingKeybindingHandler {
                 window.move_resize_frame(false, x, y, width, height);
             }
 
+        // Move window to a work area edge while preserving its size
+        } else if ([
+            Shortcuts.MOVE_TO_TOP_EDGE,
+            Shortcuts.MOVE_TO_BOTTOM_EDGE,
+            Shortcuts.MOVE_TO_LEFT_EDGE,
+            Shortcuts.MOVE_TO_RIGHT_EDGE
+        ].includes(shortcutName)) {
+            this._moveWindowToEdge(window, shortcutName);
+
         // Tile a window
         } else {
             const dynamicBehaviour = Settings.DYNAMIC_KEYBINDINGS;
@@ -384,6 +393,54 @@ var Handler = class TilingKeybindingHandler {
                 default:
                     Twm.toggleTiling(window, rect);
             }
+        }
+    }
+
+    _moveWindowToEdge(window, shortcutName) {
+        if (Twm.isMaximized(window))
+            return;
+
+        const workArea = new Rect(window.get_work_area_current_monitor());
+        const getTargetPos = rect => {
+            switch (shortcutName) {
+                case Shortcuts.MOVE_TO_TOP_EDGE:
+                    return [rect.x, workArea.y];
+                case Shortcuts.MOVE_TO_BOTTOM_EDGE:
+                    return [rect.x, workArea.y2 - rect.height];
+                case Shortcuts.MOVE_TO_LEFT_EDGE:
+                    return [workArea.x, rect.y];
+                case Shortcuts.MOVE_TO_RIGHT_EDGE:
+                    return [workArea.x2 - rect.width, rect.y];
+            }
+        };
+
+        if (window.isTiled) {
+            const currRect = window.tiledRect;
+            const [x, y] = getTargetPos(currRect);
+            const tileRect = new Rect(x, y, currRect.width, currRect.height);
+
+            if (tileRect.equal(currRect))
+                return;
+
+            Twm.tile(window, tileRect, { openTilingPopup: false });
+        } else {
+            if (!window.allows_move())
+                return;
+
+            const currRect = window.get_frame_rect();
+            const [x, y] = getTargetPos(currRect);
+
+            if (x === currRect.x && y === currRect.y)
+                return;
+
+            const wActor = window.get_compositor_private();
+            wActor && Main.wm._prepareAnimationInfo(
+                global.window_manager,
+                wActor,
+                currRect,
+                Meta.SizeChange.UNMAXIMIZE
+            );
+            window.move_frame(false, x, y);
         }
     }
 

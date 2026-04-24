@@ -174,6 +174,10 @@ var Shortcuts = class Shortcuts {
     static CENTER_WINDOW_COMPACT = 'center-compact-window';
     static CENTER_WINDOW_SMALL = 'center-small-window';
     static CENTER_WINDOW_TINY = 'center-tiny-window';
+    static MOVE_TO_TOP_EDGE = 'move-window-to-top-edge';
+    static MOVE_TO_BOTTOM_EDGE = 'move-window-to-bottom-edge';
+    static MOVE_TO_LEFT_EDGE = 'move-window-to-left-edge';
+    static MOVE_TO_RIGHT_EDGE = 'move-window-to-right-edge';
     static TOP = 'tile-top-half';
     static BOTTOM = 'tile-bottom-half';
     static LEFT = 'tile-left-half';
@@ -205,6 +209,10 @@ var Shortcuts = class Shortcuts {
             this.CENTER_WINDOW_COMPACT,
             this.CENTER_WINDOW_SMALL,
             this.CENTER_WINDOW_TINY,
+            this.MOVE_TO_TOP_EDGE,
+            this.MOVE_TO_BOTTOM_EDGE,
+            this.MOVE_TO_LEFT_EDGE,
+            this.MOVE_TO_RIGHT_EDGE,
             this.TOP,
             this.BOTTOM,
             this.LEFT,

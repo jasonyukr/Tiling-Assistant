@@ -710,6 +710,38 @@
                         </style>
                         <child>
                           <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Snap Window to Top Edge</property>
+                            <property name="suffix">
+                              <object class="ShortcutListener" id="move_window_to_top_edge"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Snap Window to Bottom Edge</property>
+                            <property name="suffix">
+                              <object class="ShortcutListener" id="move_window_to_bottom_edge"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Snap Window to Left Edge</property>
+                            <property name="suffix">
+                              <object class="ShortcutListener" id="move_window_to_left_edge"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
+                            <property name="title" translatable="yes">Snap Window to Right Edge</property>
+                            <property name="suffix">
+                              <object class="ShortcutListener" id="move_window_to_right_edge"/>
+                            </property>
+                          </object>
+                        </child>
+                        <child>
+                          <object class="TilingAssistantListRow">
                             <property name="title" translatable="yes">Tile to top</property>
                             <property name="suffix">
                               <object class="ShortcutListener" id="tile_top_half"/>

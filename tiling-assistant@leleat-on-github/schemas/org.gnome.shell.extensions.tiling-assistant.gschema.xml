@@ -101,6 +101,18 @@
 		<key name="center-tiny-window" type="as">
 			<default>[]</default>
 		</key>
+		<key name="move-window-to-top-edge" type="as">
+			<default><![CDATA[['<Super><Ctrl>Up']]]></default>
+		</key>
+		<key name="move-window-to-bottom-edge" type="as">
+			<default><![CDATA[['<Super><Ctrl>Down']]]></default>
+		</key>
+		<key name="move-window-to-left-edge" type="as">
+			<default><![CDATA[['<Super><Ctrl>Left']]]></default>
+		</key>
+		<key name="move-window-to-right-edge" type="as">
+			<default><![CDATA[['<Super><Ctrl>Right']]]></default>
+		</key>
 		<key name="tile-top-half" type="as">
 			<default><![CDATA[['<Super>KP_8']]]></default>
 		</key>
